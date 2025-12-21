@@ -1,15 +1,9 @@
 <?php
 declare(strict_types=1);
 
-/**
- * server/utils/id.php
- * Base62 ID generation and validation.
- */
-
 function base62_id(int $length = 10): string
 {
     $length = max(8, min(20, $length));
-
     $alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
     $alphaLen = strlen($alphabet);
 
@@ -19,7 +13,6 @@ function base62_id(int $length = 10): string
     for ($i = 0; $i < $length; $i++) {
         $out .= $alphabet[ord($bytes[$i]) % $alphaLen];
     }
-
     return $out;
 }
 

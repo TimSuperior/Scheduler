@@ -1,6 +1,8 @@
-# Редирект с http на https создан автоматически при заказе бесплатного ssl-сертификата
 RewriteEngine On
-RewriteCond %{SERVER_PORT} !^443$
-RewriteRule .* https://%{SERVER_NAME}%{REQUEST_URI} [R,L]
-# Конец редиректа
 
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+RewriteRule ^s/([0-9A-Za-z]{8,20})$ /server/pages/view.php?id=$1 [L,QSA]
+RewriteRule ^embed/([0-9A-Za-z]{8,20})$ /server/pages/embed.php?id=$1 [L,QSA]

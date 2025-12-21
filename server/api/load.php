@@ -1,11 +1,6 @@
 <?php
 declare(strict_types=1);
 
-/**
- * server/api/load.php
- * GET ?id=XXXX -> returns stored payload.
- */
-
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../utils/id.php';
 require_once __DIR__ . '/../utils/validate.php';
@@ -25,9 +20,7 @@ try {
     $stmt->execute([':id' => $id]);
     $row = $stmt->fetch();
 
-    if (!$row) {
-        send_json(['success' => false, 'error' => 'NOT_FOUND'], 404);
-    }
+    if (!$row) send_json(['success' => false, 'error' => 'NOT_FOUND'], 404);
 
     if (!empty($row['expires_at'])) {
         $exp = strtotime((string)$row['expires_at']);
@@ -40,15 +33,10 @@ try {
     $payload = json_decode($payloadRaw, true);
 
     if (!is_array($payload)) {
-        // Defensive: DB should contain valid JSON, but don't crash if corrupted
         send_json(['success' => false, 'error' => 'CORRUPT_PAYLOAD'], 500);
     }
 
-    send_json([
-        'success' => true,
-        'id' => $id,
-        'payload' => $payload,
-    ], 200);
+    send_json(['success' => true, 'id' => $id, 'payload' => $payload], 200);
 
 } catch (Throwable) {
     send_json(['success' => false, 'error' => 'SERVER_ERROR'], 500);

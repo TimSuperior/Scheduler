@@ -1,41 +1,37 @@
 <?php
 declare(strict_types=1);
 
-/**
- * server/utils/validate.php
- * JSON helpers, validation, small rate limiter, and common headers.
- */
-
-function set_security_headers(): void
+function set_security_headers(bool $allowEmbed = false): void
 {
     header('X-Content-Type-Options: nosniff');
     header('Referrer-Policy: no-referrer');
-    header('X-Frame-Options: SAMEORIGIN');
-    // You can tighten CSP once frontend is stable:
-    // header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'self';");
+
+    if ($allowEmbed) {
+        // Allow embedding (MVP). You can restrict later by domain.
+        header("Content-Security-Policy: frame-ancestors *;");
+        // DO NOT send X-Frame-Options in embed mode.
+    } else {
+        header('X-Frame-Options: SAMEORIGIN');
+        // Optional CSP (tighten later if needed):
+        // header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'self';");
+    }
 }
 
 function send_json(array $data, int $status = 200): void
 {
     http_response_code($status);
     header('Content-Type: application/json; charset=utf-8');
-    set_security_headers();
+    set_security_headers(false);
     echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
 
-function read_raw_body(int $maxBytes = 200_000): string
+function read_raw_body(int $maxBytes = 250_000): string
 {
     $raw = file_get_contents('php://input');
-    if ($raw === false) {
-        throw new RuntimeException('Failed to read request body.');
-    }
-    if ($raw === '') {
-        throw new InvalidArgumentException('Empty request body.');
-    }
-    if (strlen($raw) > $maxBytes) {
-        throw new InvalidArgumentException('Payload too large.');
-    }
+    if ($raw === false) throw new RuntimeException('Failed to read request body.');
+    if ($raw === '') throw new InvalidArgumentException('Empty request body.');
+    if (strlen($raw) > $maxBytes) throw new InvalidArgumentException('Payload too large.');
     return $raw;
 }
 
@@ -46,16 +42,10 @@ function decode_json_object(string $raw): array
     } catch (Throwable) {
         throw new InvalidArgumentException('Invalid JSON.');
     }
-    if (!is_array($data)) {
-        throw new InvalidArgumentException('JSON must be an object.');
-    }
+    if (!is_array($data)) throw new InvalidArgumentException('JSON must be an object.');
     return $data;
 }
 
-/**
- * Keep this LIGHT: backend stores payload as-is.
- * These checks prevent totally broken structures.
- */
 function validate_schedule_shape(array $data): void
 {
     if (isset($data['type']) && !in_array($data['type'], ['weekly', 'daily'], true)) {
@@ -64,11 +54,9 @@ function validate_schedule_shape(array $data): void
     if (isset($data['blocks']) && !is_array($data['blocks'])) {
         throw new InvalidArgumentException('blocks must be an array.');
     }
+    // Keep MVP: store payload mostly as-is.
 }
 
-/**
- * Simple file-based rate limit (good for shared hosting MVP).
- */
 function rate_limit(string $bucket, int $maxRequests = 30, int $windowSec = 60): void
 {
     $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
@@ -90,33 +78,28 @@ function rate_limit(string $bucket, int $maxRequests = 30, int $windowSec = 60):
         }
     }
 
-    if (!is_int($state['reset']) || !is_int($state['count'])) {
+    if ($now > (int)$state['reset']) {
         $state = ['reset' => $now + $windowSec, 'count' => 0];
     }
 
-    if ($now > $state['reset']) {
-        $state = ['reset' => $now + $windowSec, 'count' => 0];
-    }
-
-    $state['count']++;
+    $state['count'] = (int)$state['count'] + 1;
     @file_put_contents($file, json_encode($state), LOCK_EX);
 
     if ($state['count'] > $maxRequests) {
-        header('Retry-After: ' . max(1, $state['reset'] - $now));
+        header('Retry-After: ' . max(1, (int)$state['reset'] - $now));
         send_json(['success' => false, 'error' => 'RATE_LIMITED'], 429);
     }
 }
 
-/**
- * ID can come from ?id= or PATH_INFO (/view.php/Abc123...)
- */
 function get_id_from_request(): string
 {
     $id = (string)($_GET['id'] ?? '');
     if ($id !== '') return $id;
 
+    // if Apache uses PATH_INFO
     $pi = trim((string)($_SERVER['PATH_INFO'] ?? ''), '/');
     if ($pi !== '') return $pi;
 
+    // fallback if you rewrite with /s/ID and pass as param
     return '';
 }

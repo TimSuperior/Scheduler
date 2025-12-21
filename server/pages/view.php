@@ -1,17 +1,11 @@
 <?php
 declare(strict_types=1);
 
-/**
- * server/pages/view.php
- * Read-only public viewer. Injects window.__SCHEDULE__ safely.
- */
-
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../utils/id.php';
 require_once __DIR__ . '/../utils/validate.php';
 
-function text_error(int $status, string $message): void
-{
+function text_error(int $status, string $message): void {
     http_response_code($status);
     header('Content-Type: text/plain; charset=utf-8');
     echo $message;
@@ -20,46 +14,30 @@ function text_error(int $status, string $message): void
 
 try {
     $id = get_id_from_request();
-    if (!is_valid_id($id)) {
-        text_error(400, 'Bad or missing id.');
-    }
+    if (!is_valid_id($id)) text_error(400, 'Bad or missing id.');
 
     $pdo = db();
     $stmt = $pdo->prepare('SELECT payload, expires_at FROM public_schedules WHERE id = :id LIMIT 1');
     $stmt->execute([':id' => $id]);
     $row = $stmt->fetch();
-
-    if (!$row) {
-        text_error(404, 'Not found.');
-    }
+    if (!$row) text_error(404, 'Not found.');
 
     if (!empty($row['expires_at'])) {
         $exp = strtotime((string)$row['expires_at']);
-        if ($exp !== false && time() > $exp) {
-            text_error(410, 'Expired.');
-        }
+        if ($exp !== false && time() > $exp) text_error(410, 'Expired.');
     }
 
-    // Decode then re-encode safely for HTML <script> context
-    $payloadRaw = (string)$row['payload'];
-    $payload = json_decode($payloadRaw, true);
+    $payload = json_decode((string)$row['payload'], true);
+    if (!is_array($payload)) text_error(500, 'Corrupt payload.');
 
-    if (!is_array($payload)) {
-        text_error(500, 'Corrupt payload.');
-    }
-
-    // Safe JSON for JS injection (prevents </script> issues)
     $payloadJson = json_encode(
         $payload,
-        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES |
+        JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
     );
+    if ($payloadJson === false) text_error(500, 'Encode error.');
 
-    if ($payloadJson === false) {
-        text_error(500, 'Failed to encode payload.');
-    }
-
-    // Normal security headers (OK for view page)
-    set_security_headers();
+    set_security_headers(false);
 
 } catch (Throwable) {
     text_error(500, 'Server error.');
@@ -76,7 +54,6 @@ try {
   <link rel="stylesheet" href="/public/assets/css/layout.css">
   <link rel="stylesheet" href="/public/assets/css/schedule.css">
   <link rel="stylesheet" href="/public/assets/css/print.css" media="print">
-
   <meta name="robots" content="noindex" />
 </head>
 <body>
