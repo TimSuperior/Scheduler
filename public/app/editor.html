@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Schedule Builder — Editor</title>
+
+  <link rel="stylesheet" href="/public/assets/css/base.css">
+  <link rel="stylesheet" href="/public/assets/css/layout.css">
+  <link rel="stylesheet" href="/public/assets/css/schedule.css">
+  <link rel="stylesheet" href="/public/assets/css/print.css" media="print">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar__left">
+      <a class="brand" href="/public/index.html" aria-label="Home">
+        <span class="brand__mark">SB</span>
+        <span class="brand__name">Schedule Builder</span>
+      </a>
+    </div>
+
+    <div class="topbar__right">
+      <a class="btn btn--ghost" href="/public/index.html">Home</a>
+      <button class="btn btn--ghost" type="button" id="btnClear">Clear</button>
+      <button class="btn btn--primary" type="button" id="btnShare">Share</button>
+      <button class="btn" type="button" onclick="window.print()">Print</button>
+    </div>
+  </header>
+
+  <main class="shell">
+    <aside class="sidebar">
+      <div class="panel">
+        <div class="panel__title">Mode</div>
+        <div class="seg" role="tablist" aria-label="Mode selector">
+          <button class="seg__btn is-active" type="button" data-mode="weekly">Weekly</button>
+          <button class="seg__btn" type="button" data-mode="daily">Daily</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel__title">Schedule</div>
+
+        <label class="field">
+          <span class="field__label">Title</span>
+          <input class="input" id="title" placeholder="My schedule" />
+        </label>
+
+        <div class="row">
+          <label class="field">
+            <span class="field__label">Start hour</span>
+            <select class="select" id="startHour">
+              <option>5</option><option selected>6</option><option>7</option><option>8</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span class="field__label">End hour</span>
+            <select class="select" id="endHour">
+              <option>20</option><option>22</option><option selected>24</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="field__label">Snap (minutes)</span>
+          <select class="select" id="slotMinutes">
+            <option>15</option>
+            <option selected>30</option>
+            <option>60</option>
+          </select>
+        </label>
+
+        <button class="btn btn--block btn--primary" type="button" id="btnAddBlock">+ Add block</button>
+      </div>
+
+      <div class="panel">
+        <div class="panel__title">Legend</div>
+        <div class="legend">
+          <div class="chip"><span class="dot" style="background:#4caf50"></span> Study</div>
+          <div class="chip"><span class="dot" style="background:#2196f3"></span> Work</div>
+          <div class="chip"><span class="dot" style="background:#ff9800"></span> Fitness</div>
+          <div class="chip"><span class="dot" style="background:#9c27b0"></span> Personal</div>
+        </div>
+      </div>
+    </aside>
+
+    <section class="content">
+      <div class="content__head">
+        <h1 class="title">Editor</h1>
+        <div class="hint">Your JS will render blocks into each day column.</div>
+      </div>
+
+      <div class="board" id="scheduleBoard" data-mode="weekly">
+        <div class="board__header">
+          <div class="board__corner"></div>
+          <div class="board__days">
+            <div class="dayhead">Mon</div><div class="dayhead">Tue</div><div class="dayhead">Wed</div>
+            <div class="dayhead">Thu</div><div class="dayhead">Fri</div><div class="dayhead">Sat</div><div class="dayhead">Sun</div>
+          </div>
+        </div>
+
+        <div class="board__scroll" id="boardScroll">
+          <div class="times" aria-hidden="true">
+            <div class="time">06:00</div><div class="time">07:00</div><div class="time">08:00</div><div class="time">09:00</div>
+            <div class="time">10:00</div><div class="time">11:00</div><div class="time">12:00</div><div class="time">13:00</div>
+            <div class="time">14:00</div><div class="time">15:00</div><div class="time">16:00</div><div class="time">17:00</div>
+            <div class="time">18:00</div><div class="time">19:00</div><div class="time">20:00</div><div class="time">21:00</div>
+            <div class="time">22:00</div><div class="time">23:00</div><div class="time">24:00</div>
+          </div>
+
+          <div class="gridwrap">
+            <div class="gridlines" aria-hidden="true"></div>
+
+            <div class="days">
+              <div class="daycol" data-day="0"></div>
+              <div class="daycol" data-day="1"></div>
+              <div class="daycol" data-day="2"></div>
+              <div class="daycol" data-day="3"></div>
+              <div class="daycol" data-day="4"></div>
+              <div class="daycol" data-day="5"></div>
+              <div class="daycol" data-day="6"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="footer">
+        <span class="muted">Tip: blocks are absolutely positioned using top/height in px.</span>
+      </footer>
+    </section>
+  </main>
+
+  <script type="module" src="/public/assets/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+.board{
+  background: rgba(20,24,38,.78);
+  border:1px solid var(--border);
+  border-radius: var(--r2);
+  box-shadow: var(--shadow);
+  overflow:hidden;
+}
+
+.board__header{
+  display:grid;
+  grid-template-columns: var(--timeW) 1fr;
+  border-bottom:1px solid var(--border);
+  background: rgba(0,0,0,.18);
+}
+.board__corner{height:44px;border-right:1px solid var(--border)}
+
+.board__days{
+  display:grid;
+  grid-template-columns: repeat(7, minmax(var(--dayMinW), 1fr));
+}
+.dayhead{
+  height:44px;
+  display:flex;align-items:center;justify-content:center;
+  color: rgba(255,255,255,.84);
+  font-weight:700;
+  border-right:1px solid var(--border);
+}
+.dayhead:last-child{border-right:none}
+
+.board__scroll{
+  display:grid;
+  grid-template-columns: var(--timeW) 1fr;
+  max-height: 72vh;
+  overflow:auto;
+}
+
+.times{
+  border-right:1px solid var(--border);
+  background: rgba(0,0,0,.12);
+}
+.time{
+  height: var(--hourH);
+  padding: 10px 10px 0 10px;
+  color: var(--muted);
+  font-size: 12px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+
+.gridwrap{
+  position:relative;
+  min-width: calc(var(--dayMinW) * 7);
+  background: rgba(0,0,0,.10);
+}
+.gridlines{
+  position:absolute; inset:0;
+  pointer-events:none;
+  background-image: linear-gradient(to bottom, rgba(255,255,255,.06) 1px, transparent 1px);
+  background-size: 100% var(--hourH);
+}
+
+.days{
+  position:relative;
+  display:grid;
+  grid-template-columns: repeat(7, minmax(var(--dayMinW), 1fr));
+  min-height: calc(var(--hourH) * 19);
+}
+.daycol{position:relative;border-right:1px solid rgba(255,255,255,.08)}
+.daycol:last-child{border-right:none}
+
+/* Blocks (JS sets top/height and optional --b color) */
+.block{
+  --b: var(--primary);
+  position:absolute;
+  left:8px;
+  right:8px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.14);
+  background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(0,0,0,.10));
+  box-shadow: 0 8px 18px rgba(0,0,0,.28);
+  overflow:hidden;
+  padding:10px 10px 9px;
+}
+.block::before{
+  content:"";
+  position:absolute; left:0; top:0; bottom:0;
+  width:6px;
+  background: var(--b);
+}
+.block__title{font-weight:800;margin-left:6px;font-size:13px;line-height:1.2}
+.block__meta{margin-left:6px;margin-top:4px;color:rgba(255,255,255,.70);font-size:12px}

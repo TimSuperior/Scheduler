@@ -1,1 +1,137 @@
-sardor lol
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Schedule Builder</title>
+
+  <link rel="stylesheet" href="/public/assets/css/base.css">
+  <link rel="stylesheet" href="/public/assets/css/layout.css">
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="topbar__left">
+      <a class="brand" href="/public/index.html" aria-label="Home">
+        <span class="brand__mark">SB</span>
+        <span class="brand__name">Schedule Builder</span>
+      </a>
+    </div>
+
+    <div class="topbar__right">
+      <a class="btn btn--ghost" href="./public/app/view.html">Viewer</a>
+      <a class="btn btn--primary" href="./public/app/editor.html">Open editor</a>
+    </div>
+  </header>
+
+  <main class="landing">
+    <section class="hero">
+      <div class="hero__grid">
+        <div class="card hero__copy">
+          <h1 class="hero__title">Build clean weekly & daily schedules in minutes.</h1>
+          <p class="hero__sub">
+            Create time blocks, print your schedule, or generate a share link.
+            This UI is built with HTML/CSS and ready for your JS + PHP backend.
+          </p>
+
+          <div class="hero__cta">
+            <a class="btn btn--primary btn--lg" href="/public/app/editor.html">Start building</a>
+            <a class="btn btn--lg" href="/public/app/view.html">Open viewer</a>
+            <a class="btn btn--lg btn--ghost" href="/public/app/embed.html">Embed demo</a>
+          </div>
+
+          <div class="hero__pills">
+            <span class="pill">Responsive</span>
+            <span class="pill">Print-ready</span>
+            <span class="pill">Share & embed flow</span>
+          </div>
+
+          <div class="steps">
+            <div class="step">
+              <div class="step__kicker">Step 1</div>
+              <div class="step__title">Create blocks</div>
+              <div class="step__text">Add time ranges and labels in the editor.</div>
+            </div>
+            <div class="step">
+              <div class="step__kicker">Step 2</div>
+              <div class="step__title">Print / export</div>
+              <div class="step__text">Print cleanly to paper or PDF.</div>
+            </div>
+            <div class="step">
+              <div class="step__kicker">Step 3</div>
+              <div class="step__title">Share link</div>
+              <div class="step__text">Backend stores a JSON snapshot and returns /s/{id}.</div>
+            </div>
+          </div>
+
+          <p class="mini muted">
+            App pages:
+            <code>./public/app/editor.html</code>,
+            <code>./public/app/view.html</code>,
+            <code>./public/app/embed.html</code>
+          </p>
+        </div>
+
+        <aside class="card hero__mock" aria-label="Schedule preview mock">
+          <div class="mock__top">
+            <span>Weekly preview</span>
+            <span class="muted">06:00–24:00</span>
+          </div>
+
+          <div class="mock__grid">
+            <div class="mock__times" aria-hidden="true">
+              <div>06:00</div><div>07:00</div><div>08:00</div><div>09:00</div>
+              <div>10:00</div><div>11:00</div><div>12:00</div><div>13:00</div>
+            </div>
+
+            <div class="mock__days">
+              <div class="mock__block" style="top: 88px; height: 72px; --b:#4caf50;">
+                <b>Math</b><span>08:00–09:15</span>
+              </div>
+              <div class="mock__block" style="top: 200px; height: 56px; left: 42%; width: 48%; --b:#ff9800;">
+                <b>Workout</b><span>10:30–11:25</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mock__bottom">
+            <a class="btn btn--primary btn--block" href="/public/app/editor.html">Try the editor</a>
+            <div class="mini muted">
+              Backend APIs:
+              <code>./server/api/share.php</code>,
+              <code>./server/api/load.php?id=...</code>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="card section">
+      <h2 class="section__title">FAQ</h2>
+      <div class="faq">
+        <div class="qa">
+          <h3>Where does data live?</h3>
+          <p>Editing uses browser storage. Clicking Share sends JSON to PHP and saves it in SQLite/MySQL.</p>
+        </div>
+        <div class="qa">
+          <h3>How does /s/{id} work?</h3>
+          <p>Apache rewrite routes /s/{id} to a PHP page which injects JSON for the frontend viewer.</p>
+        </div>
+        <div class="qa">
+          <h3>Is it mobile-friendly?</h3>
+          <p>Yes. Layout stacks on small screens; schedule grid scrolls horizontally.</p>
+        </div>
+        <div class="qa">
+          <h3>Can we add accounts later?</h3>
+          <p>Yes. Keep MVP: share links first, accounts later.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footerbar">
+      <span>© Schedule Builder</span>
+      <span class="muted">HTML/CSS/JS + PHP backend</span>
+    </footer>
+  </main>
+</body>
+</html>

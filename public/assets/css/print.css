@@ -1,0 +1,21 @@
+@media print {
+  body { background: #fff !important; color:#000 !important; }
+  .topbar, .sidebar, .footerbar, .footer, .hint { display:none !important; }
+
+  .shell, .landing { max-width:none; padding:0; margin:0; }
+  .card { box-shadow:none !important; border-radius:0 !important; }
+
+  .board{
+    box-shadow:none !important;
+    border:1px solid #ccc !important;
+    border-radius:0 !important;
+  }
+  .board__scroll{ max-height:none !important; overflow:visible !important; }
+  .dayhead{ color:#000 !important; }
+  .time{ color:#333 !important; }
+  .block{
+    box-shadow:none !important;
+    border:1px solid #aaa !important;
+    background:#f7f7f7 !important;
+  }
+}

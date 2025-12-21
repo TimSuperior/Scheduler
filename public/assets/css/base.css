@@ -1,0 +1,44 @@
+:root{
+  --bg:#0b0c10;
+  --panel:#11131a;
+  --card:#141826;
+  --border:rgba(255,255,255,.10);
+  --text:rgba(255,255,255,.92);
+  --muted:rgba(255,255,255,.65);
+  --muted2:rgba(255,255,255,.45);
+  --shadow: 0 10px 30px rgba(0,0,0,.35);
+
+  --r:16px;
+  --r2:20px;
+
+  --btn:#1f2538;
+  --btn2:#262f48;
+  --primary:#4f7cff;
+
+  --timeW: 72px;
+  --dayMinW: 140px;
+  --hourH: 64px;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+
+body{
+  margin:0;
+  font: 14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  color:var(--text);
+  background: radial-gradient(1200px 900px at 20% 0%, #162042 0%, var(--bg) 55%);
+}
+
+a{color:inherit;text-decoration:none}
+button,input,select{font:inherit}
+
+.muted{color:var(--muted)}
+.title{margin:0;font-size:20px;font-weight:700}
+.hint{color:var(--muted);font-size:13px}
+
+code{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: .95em;
+  color: rgba(255,255,255,.82);
+}
