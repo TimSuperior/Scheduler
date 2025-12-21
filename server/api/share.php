@@ -5,52 +5,68 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../utils/id.php';
 require_once __DIR__ . '/../utils/validate.php';
 
+header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+
+function respond(int $status, array $data): void {
+    http_response_code($status);
+    echo json_encode($data, JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    respond(405, ['error' => 'Method not allowed. Use POST.']);
+}
+
+$raw = file_get_contents('php://input');
+if ($raw === false || trim($raw) === '') {
+    respond(400, ['error' => 'Empty request body.']);
+}
+
+if (strlen($raw) > 200000) { // ~200 KB limit
+    respond(413, ['error' => 'Payload too large.']);
+}
+
+$data = json_decode($raw, true);
+if (!is_array($data)) {
+    respond(400, ['error' => 'Invalid JSON.']);
+}
+
+[$ok, $err] = validate_schedule($data);
+if (!$ok) {
+    respond(422, ['error' => $err]);
+}
+
 try {
-    if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-        send_json(['success' => false, 'error' => 'METHOD_NOT_ALLOWED'], 405);
-    }
-
-    rate_limit('share', 30, 60);
-
-    $raw = read_raw_body(250_000);
-    $data = decode_json_object($raw);
-    validate_schedule_shape($data);
-
     $pdo = db();
+    $now = time();
 
+    // Store canonical JSON string (re-encode)
+    $json = json_encode($data, JSON_UNESCAPED_UNICODE);
+
+    // Generate unique id
     $id = '';
     for ($i = 0; $i < 8; $i++) {
-        $candidate = base62_id(10);
-        $stmt = $pdo->prepare('SELECT 1 FROM public_schedules WHERE id = :id LIMIT 1');
-        $stmt->execute([':id' => $candidate]);
-        if (!$stmt->fetchColumn()) { $id = $candidate; break; }
+        $try = new_id(10);
+        $stmt = $pdo->prepare('INSERT OR IGNORE INTO schedules (id, data, created_at, updated_at) VALUES (:id, :data, :c, :u)');
+        $stmt->execute([
+            ':id' => $try,
+            ':data' => $json,
+            ':c' => $now,
+            ':u' => $now
+        ]);
+
+        if ($stmt->rowCount() === 1) {
+            $id = $try;
+            break;
+        }
     }
-    if ($id === '') throw new RuntimeException('Failed to generate unique id.');
 
-    $nowIso = gmdate('c');
-    $expiresIso = null; // set ISO time if you want expiry
+    if ($id === '') {
+        respond(500, ['error' => 'Could not generate unique id. Try again.']);
+    }
 
-    $ins = $pdo->prepare("
-        INSERT INTO public_schedules (id, payload, created_at, expires_at)
-        VALUES (:id, :payload, :created_at, :expires_at)
-    ");
-    $ins->execute([
-        ':id' => $id,
-        ':payload' => $raw,
-        ':created_at' => $nowIso,
-        ':expires_at' => $expiresIso,
-    ]);
-
-    send_json([
-        'success' => true,
-        'id' => $id,
-        'url' => "/s/$id",
-        'embedUrl' => "/embed/$id",
-        'createdAt' => $nowIso,
-    ], 201);
-
-} catch (InvalidArgumentException $e) {
-    send_json(['success' => false, 'error' => 'BAD_REQUEST', 'message' => $e->getMessage()], 400);
-} catch (Throwable) {
-    send_json(['success' => false, 'error' => 'SERVER_ERROR'], 500);
+    respond(200, ['id' => $id]);
+} catch (Throwable $e) {
+    respond(500, ['error' => 'Server error.', 'details' => $e->getMessage()]);
 }

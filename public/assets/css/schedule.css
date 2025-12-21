@@ -1,90 +1,132 @@
-.board{
-  background: rgba(20,24,38,.78);
-  border:1px solid var(--border);
-  border-radius: var(--r2);
-  box-shadow: var(--shadow);
-  overflow:hidden;
+/* =========================
+   schedule.css
+   - Grid + blocks styling
+   ========================= */
+
+.schedule{
+  padding: 12px;
 }
 
-.board__header{
-  display:grid;
-  grid-template-columns: var(--timeW) 1fr;
-  border-bottom:1px solid var(--border);
-  background: rgba(0,0,0,.18);
-}
-.board__corner{height:44px;border-right:1px solid var(--border)}
-
-.board__days{
-  display:grid;
-  grid-template-columns: repeat(7, minmax(var(--dayMinW), 1fr));
-}
-.dayhead{
-  height:44px;
-  display:flex;align-items:center;justify-content:center;
-  color: rgba(255,255,255,.84);
-  font-weight:700;
-  border-right:1px solid var(--border);
-}
-.dayhead:last-child{border-right:none}
-
-.board__scroll{
-  display:grid;
-  grid-template-columns: var(--timeW) 1fr;
-  max-height: 72vh;
-  overflow:auto;
+.schedule__toolbar{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
-.times{
-  border-right:1px solid var(--border);
+.schedule__grid{
+  position: relative;
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  grid-template-rows: 44px 1fr;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
   background: rgba(0,0,0,.12);
 }
-.time{
-  height: var(--hourH);
-  padding: 10px 10px 0 10px;
+
+.schedule__axis{
+  grid-column: 1 / 2;
+  grid-row: 2 / 3;
+  border-right: 1px solid var(--line);
+  background: rgba(0,0,0,.12);
+}
+
+.schedule__days{
+  grid-column: 2 / 3;
+  grid-row: 1 / 2;
+  border-bottom: 1px solid var(--line);
+  background: rgba(0,0,0,.12);
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+}
+
+.schedule__day{
+  display: grid;
+  place-items: center;
+  font-size: var(--fs-5);
   color: var(--muted);
-  font-size: 12px;
-  border-bottom: 1px solid rgba(255,255,255,.06);
+  border-right: 1px solid var(--line2);
+  padding: 10px 6px;
+}
+.schedule__day:last-child{ border-right: none; }
+
+.schedule__canvas{
+  grid-column: 2 / 3;
+  grid-row: 2 / 3;
+  position: relative;
+  min-height: 720px;
+  background:
+    linear-gradient(to bottom, var(--line2) 1px, transparent 1px) 0 0/100% 48px,
+    linear-gradient(to right, var(--line2) 1px, transparent 1px) 0 0/120px 100%;
 }
 
-.gridwrap{
-  position:relative;
-  min-width: calc(var(--dayMinW) * 7);
-  background: rgba(0,0,0,.10);
-}
-.gridlines{
-  position:absolute; inset:0;
-  pointer-events:none;
-  background-image: linear-gradient(to bottom, rgba(255,255,255,.06) 1px, transparent 1px);
-  background-size: 100% var(--hourH);
+.time-label{
+  height: 48px;
+  border-bottom: 1px solid var(--line2);
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 6px 10px 0 0;
+  color: var(--muted);
+  font-size: var(--fs-5);
 }
 
-.days{
-  position:relative;
-  display:grid;
-  grid-template-columns: repeat(7, minmax(var(--dayMinW), 1fr));
-  min-height: calc(var(--hourH) * 19);
-}
-.daycol{position:relative;border-right:1px solid rgba(255,255,255,.08)}
-.daycol:last-child{border-right:none}
-
-/* Blocks (JS sets top/height and optional --b color) */
 .block{
-  --b: var(--primary);
-  position:absolute;
-  left:8px;
-  right:8px;
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,.14);
-  background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(0,0,0,.10));
-  box-shadow: 0 8px 18px rgba(0,0,0,.28);
-  overflow:hidden;
-  padding:10px 10px 9px;
+  position: absolute;
+  border-radius: 14px;
+  border: 1px solid rgba(79,70,229,.35);
+  background: rgba(79,70,229,.22);
+  box-shadow: 0 8px 18px rgba(0,0,0,.25);
+  padding: 10px;
+  overflow: hidden;
+  user-select: none;
 }
-.block::before{
-  content:"";
-  position:absolute; left:0; top:0; bottom:0;
-  width:6px;
-  background: var(--b);
+
+.block__title{
+  font-weight: 800;
+  font-size: 13px;
+  line-height: 1.2;
+  margin: 0;
 }
-.block__title{font-weight:800;margin-left:6px;font-size:13px;line-height:1.2}
-.block__meta{margin-left:6px;margin-top:4px;color:rgba(255,255,255,.70);font-size:12px}
+.block__meta{
+  margin-top: 6px;
+  color: rgba(233,238,255,.8);
+  font-size: 12px;
+}
+
+.block--selected{
+  outline: 2px solid rgba(34,197,94,.65);
+  outline-offset: 2px;
+}
+
+.stage--readOnly .schedule__toolbar{
+  display: none;
+}
+
+.schedule--embed{
+  padding: 0;
+}
+.schedule--embed .schedule__grid{
+  border-radius: 12px;
+}
+
+.block__handle{
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 6px;
+  height: 10px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.18);
+  border: 1px solid rgba(255,255,255,.18);
+  cursor: ns-resize;
+}
+
+
+@media (max-width: 720px){
+  .schedule__grid{
+    grid-template-columns: 58px 1fr;
+  }
+}

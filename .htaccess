@@ -1,22 +1,18 @@
+# schedule-builder/.htaccess
+# Requires: mod_rewrite enabled (RewriteEngine On)
+# Assumes project root is the web root (so /public and /server are reachable)
+
 Options -Indexes
+
 RewriteEngine On
 
-# Ensure correct MIME types for modules
-AddType application/javascript .js .mjs
-AddType text/css .css
-
-# Block sensitive folders
-RewriteRule ^storage/ - [F,L]
-RewriteRule ^server/(config|utils)/ - [F,L]
-
-# Landing page
-RewriteRule ^$ /public/index.html [L]
-
-# Allow real files/folders
+# --- Safety: do not rewrite real files or directories ---
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
-# Share routes
-RewriteRule ^s/([0-9A-Za-z]{8,20})$ /server/pages/view.php?id=$1 [L,QSA]
-RewriteRule ^embed/([0-9A-Za-z]{8,20})$ /server/pages/embed.php?id=$1 [L,QSA]
+# --- /s/<id> -> /server/pages/s.php?id=<id> ---
+RewriteRule ^s/([0-9A-Za-z]{6,24})/?$ /server/pages/s.php?id=$1 [L,QSA,NC]
+
+# --- /embed/<id> -> /server/pages/embed.php?id=<id> ---
+RewriteRule ^embed/([0-9A-Za-z]{6,24})/?$ /server/pages/embed.php?id=$1 [L,QSA,NC]

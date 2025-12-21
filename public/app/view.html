@@ -2,66 +2,69 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Schedule — View</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>View • Schedule Builder</title>
 
-  <link rel="stylesheet" href="/public/assets/css/base.css">
-  <link rel="stylesheet" href="/public/assets/css/layout.css">
-  <link rel="stylesheet" href="/public/assets/css/schedule.css">
-  <link rel="stylesheet" href="/public/assets/css/print.css" media="print">
+  <link rel="stylesheet" href="/public/assets/css/base.css" />
+  <link rel="stylesheet" href="/public/assets/css/layout.css" />
+  <link rel="stylesheet" href="/public/assets/css/schedule.css" />
+  <link rel="stylesheet" href="/public/assets/css/print.css" media="print" />
 </head>
-<body>
-  <header class="topbar">
-    <div class="topbar__left">
-      <a class="brand" href="/public/index.html" aria-label="Home">
-        <span class="brand__mark">SB</span>
-        <span class="brand__name">Schedule</span>
-      </a>
-    </div>
-    <div class="topbar__right">
-      <a class="btn btn--ghost" href="/public/app/editor.html">Open editor</a>
-      <button class="btn" type="button" onclick="window.print()">Print</button>
-    </div>
-  </header>
-
-  <main class="shell shell--single">
-    <section class="content">
-      <div class="content__head">
-        <h1 class="title">Read-only schedule</h1>
-        <div class="hint">This page should load JSON and render blocks (no editing).</div>
+<body class="page page--view">
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="topbar__left">
+        <a class="brand" href="/public/index.html">
+          <span class="brand__mark" aria-hidden="true">SB</span>
+          <span class="brand__name">Schedule Builder</span>
+        </a>
+        <span class="crumb">View</span>
       </div>
 
-      <div class="board" data-mode="weekly">
-        <div class="board__header">
-          <div class="board__corner"></div>
-          <div class="board__days">
-            <div class="dayhead">Mon</div><div class="dayhead">Tue</div><div class="dayhead">Wed</div>
-            <div class="dayhead">Thu</div><div class="dayhead">Fri</div><div class="dayhead">Sat</div><div class="dayhead">Sun</div>
-          </div>
-        </div>
-
-        <div class="board__scroll">
-          <div class="times" aria-hidden="true">
-            <div class="time">06:00</div><div class="time">07:00</div><div class="time">08:00</div><div class="time">09:00</div>
-            <div class="time">10:00</div><div class="time">11:00</div><div class="time">12:00</div><div class="time">13:00</div>
-            <div class="time">14:00</div><div class="time">15:00</div><div class="time">16:00</div><div class="time">17:00</div>
-            <div class="time">18:00</div><div class="time">19:00</div><div class="time">20:00</div><div class="time">21:00</div>
-            <div class="time">22:00</div><div class="time">23:00</div><div class="time">24:00</div>
-          </div>
-
-          <div class="gridwrap">
-            <div class="gridlines" aria-hidden="true"></div>
-            <div class="days">
-              <div class="daycol"></div><div class="daycol"></div><div class="daycol"></div>
-              <div class="daycol"></div><div class="daycol"></div><div class="daycol"></div><div class="daycol"></div>
-            </div>
-          </div>
-        </div>
+      <div class="topbar__right">
+        <button class="btn btn--ghost" id="btnPrint" type="button">Print</button>
+        <a class="btn btn--primary" href="/public/app/editor.html">Edit</a>
       </div>
-    </section>
-  </main>
+    </header>
 
-  <script type="module" src="/public/assets/js/main.js?v=2"></script>
+    <main class="container">
+      <div class="page-head">
+        <h1 class="h1" id="viewTitle">Schedule</h1>
+        <p class="muted" id="viewHint">
+          Paste a shared schedule link or open with <code>?id=YOUR_ID</code>.
+        </p>
+      </div>
 
+      <section class="card card--padded">
+        <div class="load-row">
+          <input class="input" id="scheduleId" type="text" placeholder="Schedule ID (e.g., AbC123...)" />
+          <button class="btn btn--primary" id="btnLoad" type="button">Load</button>
+        </div>
+
+        <div class="muted small" id="loadStatus">—</div>
+      </section>
+
+      <section class="stage stage--readOnly" aria-label="Schedule Viewer">
+        <div class="stage__header">
+          <h2 class="stage__title" id="stageTitle">—</h2>
+          <div class="stage__meta muted" id="stageMeta">—</div>
+        </div>
+
+        <div class="schedule">
+          <div class="schedule__grid">
+            <div class="schedule__axis" id="timeAxis" aria-hidden="true"></div>
+            <div class="schedule__days" id="dayHeader" aria-hidden="true"></div>
+            <div class="schedule__canvas" id="canvas" aria-label="Schedule grid"></div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="footer muted">
+        <a class="nav-link" href="/public/app/embed.html">Need embed code?</a>
+      </footer>
+    </main>
+  </div>
+
+  <script type="module" src="/public/assets/js/main.js"></script>
 </body>
 </html>

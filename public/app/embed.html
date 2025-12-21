@@ -2,50 +2,46 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Schedule — Embed</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Embed • Schedule Builder</title>
 
-  <link rel="stylesheet" href="/public/assets/css/base.css">
-  <link rel="stylesheet" href="/public/assets/css/schedule.css">
+  <link rel="stylesheet" href="/public/assets/css/base.css" />
+  <link rel="stylesheet" href="/public/assets/css/layout.css" />
+  <link rel="stylesheet" href="/public/assets/css/schedule.css" />
+  <link rel="stylesheet" href="/public/assets/css/print.css" media="print" />
 
-  <style>
-    html, body { margin:0; padding:0; height:100%; }
-    body { background: transparent; }
-    .embedWrap { height: 100%; padding: 0; }
-  </style>
+  <meta name="robots" content="noindex" />
 </head>
-<body>
-  <div class="embedWrap">
-    <div class="board" data-mode="weekly">
-      <div class="board__header">
-        <div class="board__corner"></div>
-        <div class="board__days">
-          <div class="dayhead">Mon</div><div class="dayhead">Tue</div><div class="dayhead">Wed</div>
-          <div class="dayhead">Thu</div><div class="dayhead">Fri</div><div class="dayhead">Sat</div><div class="dayhead">Sun</div>
-        </div>
+<body class="page page--embed">
+  <main class="embed-shell">
+    <div class="embed-bar">
+      <div class="embed-bar__left">
+        <span class="badge">Embed</span>
+        <span class="muted small">Use <code>?id=YOUR_ID</code> to load.</span>
       </div>
 
-      <div class="board__scroll">
-        <div class="times" aria-hidden="true">
-          <div class="time">06:00</div><div class="time">07:00</div><div class="time">08:00</div><div class="time">09:00</div>
-          <div class="time">10:00</div><div class="time">11:00</div><div class="time">12:00</div><div class="time">13:00</div>
-          <div class="time">14:00</div><div class="time">15:00</div><div class="time">16:00</div><div class="time">17:00</div>
-          <div class="time">18:00</div><div class="time">19:00</div><div class="time">20:00</div><div class="time">21:00</div>
-          <div class="time">22:00</div><div class="time">23:00</div><div class="time">24:00</div>
-        </div>
-
-        <div class="gridwrap">
-          <div class="gridlines" aria-hidden="true"></div>
-          <div class="days">
-            <div class="daycol"></div><div class="daycol"></div><div class="daycol"></div>
-            <div class="daycol"></div><div class="daycol"></div><div class="daycol"></div><div class="daycol"></div>
-          </div>
-        </div>
+      <div class="embed-bar__right">
+        <a class="btn btn--ghost" href="/public/app/view.html">Open viewer</a>
+        <a class="btn btn--ghost" href="/public/app/editor.html">Open editor</a>
       </div>
     </div>
-  </div>
 
-  <script type="module" src="/public/assets/js/main.js?v=2"></script>
+    <section class="embed-stage" aria-label="Embedded Schedule">
+      <div class="stage__header">
+        <h1 class="stage__title" id="stageTitle">—</h1>
+        <div class="stage__meta muted" id="stageMeta">—</div>
+      </div>
 
+      <div class="schedule schedule--embed">
+        <div class="schedule__grid">
+          <div class="schedule__axis" id="timeAxis" aria-hidden="true"></div>
+          <div class="schedule__days" id="dayHeader" aria-hidden="true"></div>
+          <div class="schedule__canvas" id="canvas" aria-label="Schedule grid"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="/public/assets/js/main.js"></script>
 </body>
 </html>

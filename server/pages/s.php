@@ -6,12 +6,14 @@ require_once __DIR__ . '/../utils/id.php';
 function extract_id(): string {
     if (!empty($_GET['id'])) return (string)$_GET['id'];
 
+    // PATH_INFO support: /s.php/ID
     $pathInfo = $_SERVER['PATH_INFO'] ?? '';
     if ($pathInfo) {
         $candidate = trim($pathInfo, "/");
         return $candidate;
     }
 
+    // Fallback: last segment of REQUEST_URI
     $uri = $_SERVER['REQUEST_URI'] ?? '';
     $parts = explode('?', $uri, 2);
     $path = $parts[0];
@@ -27,8 +29,9 @@ if (!is_valid_id($id)) {
     exit;
 }
 
-$dest = "/public/app/embed.html?id=" . rawurlencode($id);
+$dest = "/public/app/view.html?id=" . rawurlencode($id);
 
+// Prefer HTTP redirect
 header("Location: {$dest}", true, 302);
 ?>
 <!doctype html>

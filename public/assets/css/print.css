@@ -1,21 +1,64 @@
-@media print {
-  body { background: #fff !important; color:#000 !important; }
-  .topbar, .sidebar, .footerbar, .footer, .hint { display:none !important; }
+/* =========================
+   print.css
+   - Print friendly output
+   ========================= */
 
-  .shell, .landing { max-width:none; padding:0; margin:0; }
-  .card { box-shadow:none !important; border-radius:0 !important; }
-
-  .board{
-    box-shadow:none !important;
-    border:1px solid #ccc !important;
-    border-radius:0 !important;
+@media print{
+  :root{
+    --bg:#ffffff;
+    --text:#000000;
+    --muted:#333333;
+    --line: rgba(0,0,0,.25);
+    --line2: rgba(0,0,0,.12);
   }
-  .board__scroll{ max-height:none !important; overflow:visible !important; }
-  .dayhead{ color:#000 !important; }
-  .time{ color:#333 !important; }
+
+  body{
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  .topbar, .panel, .schedule__toolbar, .embed-bar, .footer, .noscript-banner{
+    display: none !important;
+  }
+
+  .workspace{
+    display: block;
+    padding: 0;
+    width: 100%;
+    margin: 0;
+  }
+
+  .stage{
+    border: none !important;
+    box-shadow: none !important;
+    min-height: auto !important;
+  }
+
+  .stage__header{
+    border: none !important;
+    background: transparent !important;
+    padding: 0 0 10px 0 !important;
+  }
+
+  .schedule{
+    padding: 0 !important;
+  }
+
+  .schedule__grid{
+    border: 1px solid #000 !important;
+    background: #fff !important;
+  }
+
+  .schedule__canvas{
+    background:
+      linear-gradient(to bottom, rgba(0,0,0,.15) 1px, transparent 1px) 0 0/100% 48px,
+      linear-gradient(to right, rgba(0,0,0,.12) 1px, transparent 1px) 0 0/120px 100% !important;
+  }
+
   .block{
-    box-shadow:none !important;
-    border:1px solid #aaa !important;
-    background:#f7f7f7 !important;
+    background: #e8e8ff !important;
+    border: 1px solid #444 !important;
+    box-shadow: none !important;
+    color: #000 !important;
   }
 }

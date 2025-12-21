@@ -1,105 +1,117 @@
 <?php
 declare(strict_types=1);
 
-function set_security_headers(bool $allowEmbed = false): void
-{
-    header('X-Content-Type-Options: nosniff');
-    header('Referrer-Policy: no-referrer');
+/**
+ * Validate schedule payload structure for safety.
+ * Returns [bool $ok, string $error]
+ */
 
-    if ($allowEmbed) {
-        // Allow embedding (MVP). You can restrict later by domain.
-        header("Content-Security-Policy: frame-ancestors *;");
-        // DO NOT send X-Frame-Options in embed mode.
-    } else {
-        header('X-Frame-Options: SAMEORIGIN');
-        // Optional CSP (tighten later if needed):
-        // header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'self';");
+function validate_schedule($data): array
+{
+    if (!is_array($data)) return [false, 'Payload must be a JSON object.'];
+
+    if (!isset($data['meta']) || !is_array($data['meta'])) {
+        return [false, 'Missing "meta" object.'];
     }
-}
-
-function send_json(array $data, int $status = 200): void
-{
-    http_response_code($status);
-    header('Content-Type: application/json; charset=utf-8');
-    set_security_headers(false);
-    echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    exit;
-}
-
-function read_raw_body(int $maxBytes = 250_000): string
-{
-    $raw = file_get_contents('php://input');
-    if ($raw === false) throw new RuntimeException('Failed to read request body.');
-    if ($raw === '') throw new InvalidArgumentException('Empty request body.');
-    if (strlen($raw) > $maxBytes) throw new InvalidArgumentException('Payload too large.');
-    return $raw;
-}
-
-function decode_json_object(string $raw): array
-{
-    try {
-        $data = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
-    } catch (Throwable) {
-        throw new InvalidArgumentException('Invalid JSON.');
+    if (!isset($data['items']) || !is_array($data['items'])) {
+        return [false, 'Missing "items" array.'];
     }
-    if (!is_array($data)) throw new InvalidArgumentException('JSON must be an object.');
-    return $data;
-}
 
-function validate_schedule_shape(array $data): void
-{
-    if (isset($data['type']) && !in_array($data['type'], ['weekly', 'daily'], true)) {
-        throw new InvalidArgumentException('Invalid schedule type.');
+    $meta = $data['meta'];
+    $items = $data['items'];
+
+    // Limits
+    if (count($items) > 500) return [false, 'Too many items (max 500).'];
+
+    // Meta checks
+    $title = (string)($meta['title'] ?? '');
+    if (mb_strlen($title) > 120) return [false, 'Title too long (max 120).'];
+
+    $days = $meta['days'] ?? null;
+    if (!is_array($days) || count($days) < 1 || count($days) > 7) {
+        return [false, '"meta.days" must be an array of 1..7 values.'];
     }
-    if (isset($data['blocks']) && !is_array($data['blocks'])) {
-        throw new InvalidArgumentException('blocks must be an array.');
-    }
-    // Keep MVP: store payload mostly as-is.
-}
-
-function rate_limit(string $bucket, int $maxRequests = 30, int $windowSec = 60): void
-{
-    $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-    $key = preg_replace('/[^a-zA-Z0-9_.:-]/', '_', $bucket . '_' . $ip);
-
-    $dir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'sb_rate_limit';
-    if (!is_dir($dir)) @mkdir($dir, 0700, true);
-
-    $file = $dir . DIRECTORY_SEPARATOR . $key . '.json';
-    $now = time();
-
-    $state = ['reset' => $now + $windowSec, 'count' => 0];
-
-    if (is_file($file)) {
-        $raw = @file_get_contents($file);
-        $decoded = is_string($raw) ? json_decode($raw, true) : null;
-        if (is_array($decoded) && isset($decoded['reset'], $decoded['count'])) {
-            $state = $decoded;
+    foreach ($days as $d) {
+        if (!is_string($d) || mb_strlen($d) < 1 || mb_strlen($d) > 12) {
+            return [false, 'Each day label must be a short string.'];
         }
     }
 
-    if ($now > (int)$state['reset']) {
-        $state = ['reset' => $now + $windowSec, 'count' => 0];
+    $start = $meta['startMinute'] ?? null;
+    $end   = $meta['endMinute'] ?? null;
+    $step  = $meta['minuteStep'] ?? null;
+    $showWeekend = $meta['showWeekend'] ?? null;
+
+    if (!is_int_like($start) || !is_int_like($end) || !is_int_like($step)) {
+        return [false, '"startMinute", "endMinute", "minuteStep" must be numbers.'];
     }
 
-    $state['count'] = (int)$state['count'] + 1;
-    @file_put_contents($file, json_encode($state), LOCK_EX);
+    $start = (int)$start;
+    $end = (int)$end;
+    $step = (int)$step;
 
-    if ($state['count'] > $maxRequests) {
-        header('Retry-After: ' . max(1, (int)$state['reset'] - $now));
-        send_json(['success' => false, 'error' => 'RATE_LIMITED'], 429);
+    if ($start < 0 || $start > 24 * 60) return [false, 'startMinute out of range.'];
+    if ($end < 0 || $end > 24 * 60) return [false, 'endMinute out of range.'];
+    if ($end <= $start) return [false, 'endMinute must be greater than startMinute.'];
+
+    $allowedSteps = [5, 10, 15, 30, 60];
+    if (!in_array($step, $allowedSteps, true)) return [false, 'minuteStep must be one of 5,10,15,30,60.'];
+
+    if (!is_bool_like($showWeekend)) return [false, 'showWeekend must be boolean.'];
+
+    // Items checks
+    foreach ($items as $idx => $it) {
+        if (!is_array($it)) return [false, "Item #$idx must be an object."];
+
+        $dayIndex = $it['dayIndex'] ?? null;
+        $s = $it['start'] ?? null;
+        $e = $it['end'] ?? null;
+
+        if (!is_int_like($dayIndex) || !is_int_like($s) || !is_int_like($e)) {
+            return [false, "Item #$idx missing numeric fields (dayIndex/start/end)."];
+        }
+
+        $dayIndex = (int)$dayIndex;
+        $s = (int)$s;
+        $e = (int)$e;
+
+        if ($dayIndex < 0 || $dayIndex > 6) return [false, "Item #$idx dayIndex out of range."];
+        if ($s < $start || $s > $end) return [false, "Item #$idx start out of range."];
+        if ($e < $start || $e > $end) return [false, "Item #$idx end out of range."];
+        if ($e <= $s) return [false, "Item #$idx end must be greater than start."];
+        if ((($e - $s) % $step) !== 0 && (($s - $start) % $step) !== 0) {
+            // not a strict requirement, but helps keep data consistent
+            // We won't reject on this; comment out if you want strict snapping.
+        }
+
+        $text = (string)($it['text'] ?? '');
+        if (mb_strlen($text) < 1 || mb_strlen($text) > 80) {
+            return [false, "Item #$idx text must be 1..80 chars."];
+        }
+
+        $color = (string)($it['color'] ?? '');
+        if ($color !== '' && !preg_match('/^#[0-9a-fA-F]{6}$/', $color)) {
+            return [false, "Item #$idx color must be #RRGGBB."];
+        }
+
+        $notes = (string)($it['notes'] ?? '');
+        if (mb_strlen($notes) > 500) return [false, "Item #$idx notes too long (max 500)."];
+
+        $id = (string)($it['id'] ?? '');
+        if ($id !== '' && !preg_match('/^[0-9a-zA-Z_-]{3,64}$/', $id)) {
+            return [false, "Item #$idx has invalid id."];
+        }
     }
+
+    return [true, 'OK'];
 }
 
-function get_id_from_request(): string
+function is_int_like($v): bool
 {
-    $id = (string)($_GET['id'] ?? '');
-    if ($id !== '') return $id;
+    return is_int($v) || (is_numeric($v) && (string)(int)$v === (string)$v);
+}
 
-    // if Apache uses PATH_INFO
-    $pi = trim((string)($_SERVER['PATH_INFO'] ?? ''), '/');
-    if ($pi !== '') return $pi;
-
-    // fallback if you rewrite with /s/ID and pass as param
-    return '';
+function is_bool_like($v): bool
+{
+    return is_bool($v) || $v === 0 || $v === 1 || $v === '0' || $v === '1';
 }

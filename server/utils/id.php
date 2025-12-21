@@ -1,22 +1,27 @@
 <?php
 declare(strict_types=1);
 
-function base62_id(int $length = 10): string
-{
-    $length = max(8, min(20, $length));
-    $alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
-    $alphaLen = strlen($alphabet);
+/**
+ * Generate URL-safe IDs (base62-like)
+ */
 
-    $bytes = random_bytes($length);
+function new_id(int $len = 10): string
+{
+    $alphabet = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    $max = strlen($alphabet) - 1;
+
+    // random_bytes -> uniform distribution
+    $bytes = random_bytes($len);
     $out = '';
 
-    for ($i = 0; $i < $length; $i++) {
-        $out .= $alphabet[ord($bytes[$i]) % $alphaLen];
+    for ($i = 0; $i < $len; $i++) {
+        $out .= $alphabet[ord($bytes[$i]) % ($max + 1)];
     }
     return $out;
 }
 
 function is_valid_id(string $id): bool
 {
-    return (bool)preg_match('/^[0-9A-Za-z]{8,20}$/', $id);
+    // allow base62 only, 6..24 chars
+    return (bool)preg_match('/^[0-9a-zA-Z]{6,24}$/', $id);
 }
