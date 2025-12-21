@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /**
  * server/api/load.php
- * GET ?id=XXXX -> returns stored schedule JSON payload.
+ * GET ?id=XXXX -> returns stored payload.
  */
 
 require_once __DIR__ . '/../config/db.php';
@@ -21,13 +21,7 @@ try {
     }
 
     $pdo = db();
-
-    $stmt = $pdo->prepare("
-        SELECT payload, expires_at
-        FROM public_schedules
-        WHERE id = :id
-        LIMIT 1
-    ");
+    $stmt = $pdo->prepare('SELECT payload, expires_at FROM public_schedules WHERE id = :id LIMIT 1');
     $stmt->execute([':id' => $id]);
     $row = $stmt->fetch();
 
@@ -35,7 +29,6 @@ try {
         send_json(['success' => false, 'error' => 'NOT_FOUND'], 404);
     }
 
-    // Optional expiry enforcement
     if (!empty($row['expires_at'])) {
         $exp = strtotime((string)$row['expires_at']);
         if ($exp !== false && time() > $exp) {
@@ -43,19 +36,20 @@ try {
         }
     }
 
-    // payload is stored as raw JSON string
-    header('Content-Type: application/json; charset=utf-8');
-    header('X-Content-Type-Options: nosniff');
-    http_response_code(200);
+    $payloadRaw = (string)$row['payload'];
+    $payload = json_decode($payloadRaw, true);
 
-    echo json_encode([
+    if (!is_array($payload)) {
+        // Defensive: DB should contain valid JSON, but don't crash if corrupted
+        send_json(['success' => false, 'error' => 'CORRUPT_PAYLOAD'], 500);
+    }
+
+    send_json([
         'success' => true,
         'id' => $id,
-        'payload' => json_decode((string)$row['payload'], true), // decoded for convenience
-    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        'payload' => $payload,
+    ], 200);
 
-    exit;
-
-} catch (Throwable $e) {
+} catch (Throwable) {
     send_json(['success' => false, 'error' => 'SERVER_ERROR'], 500);
 }

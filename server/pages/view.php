@@ -3,27 +3,13 @@ declare(strict_types=1);
 
 /**
  * server/pages/view.php
- * Read-only public view page for /s/{id}
- * Expects ID from:
- *  - ?id=XXXX
- *  - or PATH_INFO like /view.php/XXXX (via rewrite)
+ * Read-only public view page shell. Injects window.__SCHEDULE__.
+ * Your /public/assets/js/main.js will render it.
  */
 
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../utils/id.php';
-
-function get_id_from_request(): string
-{
-    // Prefer query param
-    if (!empty($_GET['id'])) return (string)$_GET['id'];
-
-    // Try PATH_INFO
-    $pathInfo = $_SERVER['PATH_INFO'] ?? '';
-    $pathInfo = trim($pathInfo, '/');
-    if ($pathInfo !== '') return $pathInfo;
-
-    return '';
-}
+require_once __DIR__ . '/../utils/validate.php';
 
 $id = get_id_from_request();
 if (!is_valid_id($id)) {
@@ -34,7 +20,7 @@ if (!is_valid_id($id)) {
 }
 
 $pdo = db();
-$stmt = $pdo->prepare("SELECT payload, expires_at FROM public_schedules WHERE id = :id LIMIT 1");
+$stmt = $pdo->prepare('SELECT payload, expires_at FROM public_schedules WHERE id = :id LIMIT 1');
 $stmt->execute([':id' => $id]);
 $row = $stmt->fetch();
 
@@ -55,8 +41,8 @@ if (!empty($row['expires_at'])) {
     }
 }
 
+set_security_headers();
 $payloadRaw = (string)$row['payload'];
-$payloadForJs = $payloadRaw; // already JSON
 ?>
 <!doctype html>
 <html lang="en">
@@ -64,42 +50,75 @@ $payloadForJs = $payloadRaw; // already JSON
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Schedule View <?= htmlspecialchars($id, ENT_QUOTES, 'UTF-8') ?></title>
+
+  <link rel="stylesheet" href="/public/assets/css/base.css">
+  <link rel="stylesheet" href="/public/assets/css/layout.css">
+  <link rel="stylesheet" href="/public/assets/css/schedule.css">
+  <link rel="stylesheet" href="/public/assets/css/print.css" media="print">
+
   <meta name="robots" content="noindex" />
-  <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; padding: 16px; }
-    .wrap { max-width: 1000px; margin: 0 auto; }
-    .card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; }
-    pre { white-space: pre-wrap; word-break: break-word; }
-    .hint { color: #666; font-size: 14px; margin-top: 12px; }
-  </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>Schedule (read-only)</h1>
-    <div id="app" class="card">
-      <noscript>Please enable JavaScript to render the schedule.</noscript>
-      <div id="fallback">
-        <pre id="json"></pre>
-        <div class="hint">
-          If you add a frontend renderer, it can read <code>window.__SCHEDULE__</code>.
+  <header class="topbar">
+    <div class="topbar__left">
+      <a class="brand" href="/public/index.html" aria-label="Home">
+        <span class="brand__mark">SB</span>
+        <span class="brand__name">Schedule Builder</span>
+      </a>
+    </div>
+    <div class="topbar__right">
+      <a class="btn btn--ghost" href="/public/app/editor.html">Open editor</a>
+      <button class="btn" type="button" onclick="window.print()">Print</button>
+    </div>
+  </header>
+
+  <main class="shell shell--single">
+    <section class="content">
+      <div class="content__head">
+        <h1 class="title">Read-only schedule</h1>
+        <div class="hint">Loaded from share ID: <code><?= htmlspecialchars($id, ENT_QUOTES, 'UTF-8') ?></code></div>
+      </div>
+
+      <!-- Same DOM structure as your view.html -->
+      <div class="board" data-mode="weekly">
+        <div class="board__header">
+          <div class="board__corner"></div>
+          <div class="board__days">
+            <div class="dayhead">Mon</div><div class="dayhead">Tue</div><div class="dayhead">Wed</div>
+            <div class="dayhead">Thu</div><div class="dayhead">Fri</div><div class="dayhead">Sat</div><div class="dayhead">Sun</div>
+          </div>
+        </div>
+
+        <div class="board__scroll">
+          <div class="times" aria-hidden="true">
+            <div class="time">06:00</div><div class="time">07:00</div><div class="time">08:00</div><div class="time">09:00</div>
+            <div class="time">10:00</div><div class="time">11:00</div><div class="time">12:00</div><div class="time">13:00</div>
+            <div class="time">14:00</div><div class="time">15:00</div><div class="time">16:00</div><div class="time">17:00</div>
+            <div class="time">18:00</div><div class="time">19:00</div><div class="time">20:00</div><div class="time">21:00</div>
+            <div class="time">22:00</div><div class="time">23:00</div><div class="time">24:00</div>
+          </div>
+
+          <div class="gridwrap">
+            <div class="gridlines" aria-hidden="true"></div>
+            <div class="days">
+              <div class="daycol" data-day="0"></div>
+              <div class="daycol" data-day="1"></div>
+              <div class="daycol" data-day="2"></div>
+              <div class="daycol" data-day="3"></div>
+              <div class="daycol" data-day="4"></div>
+              <div class="daycol" data-day="5"></div>
+              <div class="daycol" data-day="6"></div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
+    </section>
+  </main>
 
   <script>
-    // Injected payload for your frontend app
     window.__SCHEDULE_ID__ = <?= json_encode($id, JSON_UNESCAPED_SLASHES) ?>;
-    window.__SCHEDULE__ = <?= $payloadForJs ?>;
-
-    // Fallback: show JSON if no renderer replaces it
-    document.getElementById('json').textContent = JSON.stringify(window.__SCHEDULE__, null, 2);
-
-    // Optional: load your real frontend viewer if you have it
-    // (Adjust the path to match your public JS bundle/module)
-    // Example: /public/assets/js/main.js or /assets/js/main.js depending on hosting
+    window.__SCHEDULE__ = <?= $payloadRaw ?>;
   </script>
-
   <script type="module" src="/public/assets/js/main.js"></script>
 </body>
 </html>
