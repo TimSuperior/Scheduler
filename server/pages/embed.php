@@ -3,45 +3,76 @@ declare(strict_types=1);
 
 /**
  * server/pages/embed.php
- * Minimal embed shell (iframe friendly). Injects window.__SCHEDULE__.
+ * Iframe-friendly embed page. Injects window.__SCHEDULE__ safely.
+ * IMPORTANT: Do NOT send X-Frame-Options: SAMEORIGIN here, otherwise other sites can't embed it.
  */
 
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../utils/id.php';
 require_once __DIR__ . '/../utils/validate.php';
 
-$id = get_id_from_request();
-if (!is_valid_id($id)) {
-    http_response_code(400);
+function text_error(int $status, string $message): void
+{
+    http_response_code($status);
     header('Content-Type: text/plain; charset=utf-8');
-    echo "Bad or missing id.";
+    echo $message;
     exit;
 }
 
-$pdo = db();
-$stmt = $pdo->prepare('SELECT payload, expires_at FROM public_schedules WHERE id = :id LIMIT 1');
-$stmt->execute([':id' => $id]);
-$row = $stmt->fetch();
+function set_embed_headers(): void
+{
+    header('X-Content-Type-Options: nosniff');
+    header('Referrer-Policy: no-referrer');
 
-if (!$row) {
-    http_response_code(404);
-    header('Content-Type: text/plain; charset=utf-8');
-    echo "Not found.";
-    exit;
+    // Allow embedding anywhere (MVP). If you want to restrict later, replace * with your domain(s).
+    header("Content-Security-Policy: frame-ancestors *;");
+
+    // DO NOT set X-Frame-Options here.
 }
 
-if (!empty($row['expires_at'])) {
-    $exp = strtotime((string)$row['expires_at']);
-    if ($exp !== false && time() > $exp) {
-        http_response_code(410);
-        header('Content-Type: text/plain; charset=utf-8');
-        echo "Expired.";
-        exit;
+try {
+    $id = get_id_from_request();
+    if (!is_valid_id($id)) {
+        text_error(400, 'Bad or missing id.');
     }
-}
 
-set_security_headers();
-$payloadRaw = (string)$row['payload'];
+    $pdo = db();
+    $stmt = $pdo->prepare('SELECT payload, expires_at FROM public_schedules WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $id]);
+    $row = $stmt->fetch();
+
+    if (!$row) {
+        text_error(404, 'Not found.');
+    }
+
+    if (!empty($row['expires_at'])) {
+        $exp = strtotime((string)$row['expires_at']);
+        if ($exp !== false && time() > $exp) {
+            text_error(410, 'Expired.');
+        }
+    }
+
+    $payloadRaw = (string)$row['payload'];
+    $payload = json_decode($payloadRaw, true);
+
+    if (!is_array($payload)) {
+        text_error(500, 'Corrupt payload.');
+    }
+
+    $payloadJson = json_encode(
+        $payload,
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+    );
+
+    if ($payloadJson === false) {
+        text_error(500, 'Failed to encode payload.');
+    }
+
+    set_embed_headers();
+
+} catch (Throwable) {
+    text_error(500, 'Server error.');
+}
 ?>
 <!doctype html>
 <html lang="en">
@@ -98,8 +129,8 @@ $payloadRaw = (string)$row['payload'];
   </div>
 
   <script>
-    window.__SCHEDULE_ID__ = <?= json_encode($id, JSON_UNESCAPED_SLASHES) ?>;
-    window.__SCHEDULE__ = <?= $payloadRaw ?>;
+    window.__SCHEDULE_ID__ = <?= json_encode($id, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    window.__SCHEDULE__ = <?= $payloadJson ?>;
   </script>
   <script type="module" src="/public/assets/js/main.js"></script>
 </body>

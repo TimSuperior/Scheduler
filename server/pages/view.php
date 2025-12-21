@@ -3,46 +3,67 @@ declare(strict_types=1);
 
 /**
  * server/pages/view.php
- * Read-only public view page shell. Injects window.__SCHEDULE__.
- * Your /public/assets/js/main.js will render it.
+ * Read-only public viewer. Injects window.__SCHEDULE__ safely.
  */
 
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../utils/id.php';
 require_once __DIR__ . '/../utils/validate.php';
 
-$id = get_id_from_request();
-if (!is_valid_id($id)) {
-    http_response_code(400);
+function text_error(int $status, string $message): void
+{
+    http_response_code($status);
     header('Content-Type: text/plain; charset=utf-8');
-    echo "Bad or missing id.";
+    echo $message;
     exit;
 }
 
-$pdo = db();
-$stmt = $pdo->prepare('SELECT payload, expires_at FROM public_schedules WHERE id = :id LIMIT 1');
-$stmt->execute([':id' => $id]);
-$row = $stmt->fetch();
-
-if (!$row) {
-    http_response_code(404);
-    header('Content-Type: text/plain; charset=utf-8');
-    echo "Not found.";
-    exit;
-}
-
-if (!empty($row['expires_at'])) {
-    $exp = strtotime((string)$row['expires_at']);
-    if ($exp !== false && time() > $exp) {
-        http_response_code(410);
-        header('Content-Type: text/plain; charset=utf-8');
-        echo "Expired.";
-        exit;
+try {
+    $id = get_id_from_request();
+    if (!is_valid_id($id)) {
+        text_error(400, 'Bad or missing id.');
     }
-}
 
-set_security_headers();
-$payloadRaw = (string)$row['payload'];
+    $pdo = db();
+    $stmt = $pdo->prepare('SELECT payload, expires_at FROM public_schedules WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $id]);
+    $row = $stmt->fetch();
+
+    if (!$row) {
+        text_error(404, 'Not found.');
+    }
+
+    if (!empty($row['expires_at'])) {
+        $exp = strtotime((string)$row['expires_at']);
+        if ($exp !== false && time() > $exp) {
+            text_error(410, 'Expired.');
+        }
+    }
+
+    // Decode then re-encode safely for HTML <script> context
+    $payloadRaw = (string)$row['payload'];
+    $payload = json_decode($payloadRaw, true);
+
+    if (!is_array($payload)) {
+        text_error(500, 'Corrupt payload.');
+    }
+
+    // Safe JSON for JS injection (prevents </script> issues)
+    $payloadJson = json_encode(
+        $payload,
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+    );
+
+    if ($payloadJson === false) {
+        text_error(500, 'Failed to encode payload.');
+    }
+
+    // Normal security headers (OK for view page)
+    set_security_headers();
+
+} catch (Throwable) {
+    text_error(500, 'Server error.');
+}
 ?>
 <!doctype html>
 <html lang="en">
@@ -79,7 +100,6 @@ $payloadRaw = (string)$row['payload'];
         <div class="hint">Loaded from share ID: <code><?= htmlspecialchars($id, ENT_QUOTES, 'UTF-8') ?></code></div>
       </div>
 
-      <!-- Same DOM structure as your view.html -->
       <div class="board" data-mode="weekly">
         <div class="board__header">
           <div class="board__corner"></div>
@@ -116,8 +136,8 @@ $payloadRaw = (string)$row['payload'];
   </main>
 
   <script>
-    window.__SCHEDULE_ID__ = <?= json_encode($id, JSON_UNESCAPED_SLASHES) ?>;
-    window.__SCHEDULE__ = <?= $payloadRaw ?>;
+    window.__SCHEDULE_ID__ = <?= json_encode($id, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    window.__SCHEDULE__ = <?= $payloadJson ?>;
   </script>
   <script type="module" src="/public/assets/js/main.js"></script>
 </body>
