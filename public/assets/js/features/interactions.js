@@ -4,10 +4,11 @@ import { qs, clamp, roundToStep } from "../core/utils.js";
 
 /**
  * Enables:
- * - click to add block (using window.__SB_ADD_BLOCK__ defaults)
+ * - click to add block with chosen start/end (pick day column on grid)
  * - click to select block
  * - drag block to move
  * - drag handle to resize end
+ * - re-render on resize to keep columns aligned to day header
  */
 export function initInteractions({ store, canvas }) {
   if (!canvas) return;
@@ -16,9 +17,12 @@ export function initInteractions({ store, canvas }) {
   const dayHeader = qs("#dayHeader");
 
   let selectedId = null;
-
-  // For drag
   let drag = null;
+
+  // Keep columns aligned when viewport changes
+  window.addEventListener("resize", () => {
+    renderSchedule({ store, timeAxis, dayHeader, canvas, readOnly: false });
+  });
 
   canvas.addEventListener("click", (e) => {
     const block = e.target.closest(".block");
@@ -27,43 +31,43 @@ export function initInteractions({ store, canvas }) {
       return;
     }
 
-    // If user clicked empty space, maybe add block
+    // Add mode: click empty canvas to pick day column
     const add = window.__SB_ADD_BLOCK__;
     if (!add) return;
 
-    const pos = getGridPosition(e, canvas, store);
-    if (!pos) return;
+    const dayIndex = getDayIndexFromClick(e, canvas, store);
+    if (dayIndex == null) return;
 
-    const { dayIndex, startMinute } = pos;
-    const meta = store.state.meta;
-    const end = startMinute + store.config.defaultBlockMinutes;
+    const start = Number(add.startMinute);
+    const end = Number(add.endMinute);
+
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
+      alert("Invalid task start/end time.");
+      window.__SB_ADD_BLOCK__ = null;
+      return;
+    }
 
     store.addItem({
       dayIndex,
-      start: startMinute,
+      start,
       end,
       text: add.text,
       color: add.color
     });
 
-    // Stop add mode after one placement
     window.__SB_ADD_BLOCK__ = null;
-
-    // Rerender
     renderSchedule({ store, timeAxis, dayHeader, canvas, readOnly: false });
   });
 
   canvas.addEventListener("mousedown", (e) => {
     const handle = e.target.closest("[data-handle='end']");
     const block = e.target.closest(".block");
-
     if (!block) return;
 
     const id = block.dataset.id;
     select(id);
 
     const mode = handle ? "resize" : "move";
-
     drag = {
       id,
       mode,
@@ -86,34 +90,35 @@ export function initInteractions({ store, canvas }) {
     const dy = e.clientY - drag.startY;
 
     const days = store.getVisibleDays().length;
-    const colWidth = canvas.clientWidth / days || 120;
+    const colWidth = canvas.getBoundingClientRect().width / days || 120;
 
     const it = store.state.items.find((x) => x.id === drag.id);
     if (!it) return;
 
     if (drag.mode === "move") {
-      // Update day by dx
+      // Horizontal drag moves between days
       let newDay = drag.orig.dayIndex + Math.round(dx / colWidth);
       newDay = clamp(newDay, 0, days - 1);
 
-      // Update time by dy
+      // Vertical drag moves time
       const deltaMins = dy / pxPerMin;
       const newStart = roundToStep(drag.orig.start + deltaMins, step);
       const duration = drag.orig.end - drag.orig.start;
+
       const newStartClamped = clamp(newStart, meta.startMinute, meta.endMinute - duration);
       const newEnd = newStartClamped + duration;
 
       store.updateItem(it.id, { dayIndex: newDay, start: newStartClamped, end: newEnd });
     } else {
-      // resize end only
+      // Resize end only
       const deltaMins = dy / pxPerMin;
       const proposedEnd = roundToStep(drag.orig.end + deltaMins, step);
       const minEnd = drag.orig.start + step;
       const newEnd = clamp(proposedEnd, minEnd, meta.endMinute);
+
       store.updateItem(it.id, { end: newEnd });
     }
 
-    // render after update
     renderSchedule({ store, timeAxis, dayHeader, canvas, readOnly: false });
   });
 
@@ -121,7 +126,6 @@ export function initInteractions({ store, canvas }) {
     drag = null;
   });
 
-  // Keyboard delete
   window.addEventListener("keydown", (e) => {
     if ((e.key === "Delete" || e.key === "Backspace") && selectedId) {
       store.deleteItem(selectedId);
@@ -132,17 +136,17 @@ export function initInteractions({ store, canvas }) {
 
   function select(id) {
     selectedId = id;
-    // Visual selection highlight
+
     Array.from(canvas.querySelectorAll(".block")).forEach((b) => {
       b.classList.toggle("block--selected", b.dataset.id === id);
     });
 
-    // Update selection UI if exists
     const selectedText = qs("#selectedText");
     const btnDelete = qs("#btnDelete");
     const btnDuplicate = qs("#btnDuplicate");
 
     const it = store.state.items.find((x) => x.id === id);
+
     if (it && selectedText) {
       selectedText.disabled = false;
       selectedText.value = it.text;
@@ -176,26 +180,17 @@ export function initInteractions({ store, canvas }) {
   }
 }
 
-function getGridPosition(e, canvas, store) {
+function getDayIndexFromClick(e, canvas, store) {
   const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
 
   const days = store.getVisibleDays().length;
-  const colWidth = canvas.clientWidth / days || 120;
+  const colWidth = canvas.getBoundingClientRect().width / days || 120;
 
   const dayIndex = Math.floor(x / colWidth);
   if (dayIndex < 0 || dayIndex >= days) return null;
 
-  const meta = store.state.meta;
-  const pxPerMin = store.config.pxPerMinute;
-  const step = meta.minuteStep;
-
-  const minutesFromTop = y / pxPerMin;
-  const startMinute = roundToStep(meta.startMinute + minutesFromTop, step);
-  const clampedStart = clamp(startMinute, meta.startMinute, meta.endMinute - step);
-
-  return { dayIndex, startMinute: clampedStart };
+  return dayIndex;
 }
 
 function getItemRect(id, store) {

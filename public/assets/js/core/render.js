@@ -10,39 +10,51 @@ export function renderSchedule({ store, timeAxis, dayHeader, canvas, readOnly = 
   const days = store.getVisibleDays();
   const totalMinutes = meta.endMinute - meta.startMinute;
 
-  // Render day header
+  // --- Set CSS vars so background grid aligns with data ---
+  const pxPerMin = store.config.pxPerMinute;
+  const step = meta.minuteStep;
+
+  canvas.style.setProperty("--days", String(days.length));
+  canvas.style.setProperty("--minor", `${step * pxPerMin}px`);
+  canvas.style.setProperty("--hour", `${60 * pxPerMin}px`);
+
+  // --- Day header ---
   clearEl(dayHeader);
   dayHeader.style.gridTemplateColumns = `repeat(${days.length}, 1fr)`;
   days.forEach((d) => {
     dayHeader.appendChild(el("div", { className: "schedule__day", text: d }));
   });
 
-  // Render axis
+  // --- Time axis (hour labels) ---
   clearEl(timeAxis);
-  const hourStep = 60;
-  for (let t = meta.startMinute; t < meta.endMinute; t += hourStep) {
-    const label = minsToLabel(t);
-    timeAxis.appendChild(el("div", { className: "time-label", text: label }));
+  for (let t = meta.startMinute; t < meta.endMinute; t += 60) {
+    timeAxis.appendChild(el("div", { className: "time-label", text: minsToLabel(t) }));
   }
 
-  // Canvas height based on minutes
-  const pxPerMin = store.config.pxPerMinute;
+  // --- Canvas height ---
   canvas.style.height = `${totalMinutes * pxPerMin}px`;
 
-  // Background columns feel better if we set CSS var for width calc later
-  canvas.dataset.days = String(days.length);
-
-  // Render blocks
+  // --- Blocks ---
   clearEl(canvas);
-  const colWidth = canvas.clientWidth / days.length || 120; // fallback
+
+  // IMPORTANT: Use actual canvas width so columns match header
+  const daysCount = days.length;
+  const colWidth = canvas.getBoundingClientRect().width / daysCount || 120;
   const gap = 2;
 
   state.items.forEach((item) => {
     if (!meta.showWeekend && item.dayIndex > 4) return;
-    if (item.dayIndex < 0 || item.dayIndex >= days.length) return;
+
+    // Map weekend hiding:
+    // If weekend is hidden, dayIndex 5/6 should not render
+    if (!meta.showWeekend && item.dayIndex >= 5) return;
+
+    // When weekend is shown, dayIndex is 0..6
+    if (item.dayIndex < 0 || item.dayIndex >= daysCount) return;
 
     const top = (item.start - meta.startMinute) * pxPerMin;
     const height = Math.max(8, (item.end - item.start) * pxPerMin);
+
     const left = item.dayIndex * colWidth + gap;
     const width = colWidth - gap * 2;
 
@@ -56,30 +68,22 @@ export function renderSchedule({ store, timeAxis, dayHeader, canvas, readOnly = 
     node.style.left = `${left}px`;
     node.style.width = `${width}px`;
 
-    // apply color
     node.style.background = withAlpha(item.color, 0.22);
     node.style.borderColor = withAlpha(item.color, 0.45);
 
-    const title = el("div", { className: "block__title", text: item.text });
-    const metaLine = el("div", {
-      className: "block__meta",
-      text: `${minsToLabel(item.start)} - ${minsToLabel(item.end)}`
-    });
+    node.appendChild(el("div", { className: "block__title", text: item.text }));
+    node.appendChild(
+      el("div", { className: "block__meta", text: `${minsToLabel(item.start)} - ${minsToLabel(item.end)}` })
+    );
 
-    node.appendChild(title);
-    node.appendChild(metaLine);
-
-    // If interactive, add resize handle
     if (!readOnly) {
-      const handle = el("div", { className: "block__handle", attrs: { "data-handle": "end" } });
-      node.appendChild(handle);
+      node.appendChild(el("div", { className: "block__handle", attrs: { "data-handle": "end" } }));
     }
 
     canvas.appendChild(node);
   });
 }
 
-/** Convert hex to rgba string with alpha. Accepts #rrggbb. */
 function withAlpha(hex, a) {
   const v = (hex || "").replace("#", "").trim();
   if (v.length !== 6) return `rgba(79,70,229,${a})`;

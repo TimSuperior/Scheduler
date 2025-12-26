@@ -2,9 +2,15 @@
 import { apiShare } from "../core/api.js";
 import { qs } from "../core/utils.js";
 
+/**
+ * Handles:
+ * - Share button (POST /server/api/share.php)
+ * Print is handled in bootCommon() (utils.js) via #btnPrint
+ * Zoom removed (no #btnZoomIn / #btnZoomOut)
+ */
 export function initExport({ store }) {
-  // Print button is handled in bootCommon() in utils.js
   const btnShare = qs("#btnShare");
+
   if (btnShare) {
     btnShare.addEventListener("click", async () => {
       btnShare.disabled = true;
@@ -17,9 +23,9 @@ export function initExport({ store }) {
         const id = res?.id;
         if (!id) throw new Error("No id returned");
 
-        // Copy link to clipboard (best effort)
-        const viewUrl = `${window.location.origin}/public/app/view.html?id=${encodeURIComponent(id)}`;
+        const viewUrl = `${window.location.origin}/s/${encodeURIComponent(id)}`;
 
+        // Copy link (best effort)
         try {
           await navigator.clipboard.writeText(viewUrl);
           btnShare.textContent = "Link copied!";
@@ -36,30 +42,6 @@ export function initExport({ store }) {
           btnShare.disabled = false;
         }, 1200);
       }
-    });
-  }
-
-  // Zoom buttons (optional)
-  const btnZoomIn = qs("#btnZoomIn");
-  const btnZoomOut = qs("#btnZoomOut");
-
-  if (btnZoomIn || btnZoomOut) {
-    let scale = 1;
-
-    const apply = () => {
-      const canvas = qs("#canvas");
-      if (!canvas) return;
-      canvas.style.transformOrigin = "top left";
-      canvas.style.transform = `scale(${scale})`;
-    };
-
-    btnZoomIn?.addEventListener("click", () => {
-      scale = Math.min(1.5, scale + 0.1);
-      apply();
-    });
-    btnZoomOut?.addEventListener("click", () => {
-      scale = Math.max(0.7, scale - 0.1);
-      apply();
     });
   }
 }
