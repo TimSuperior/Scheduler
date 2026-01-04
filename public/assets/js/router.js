@@ -7,6 +7,8 @@ import { initInteractions } from "./features/interactions.js";
 import { initExport } from "./features/export.js";
 import { apiLoad } from "./core/api.js";
 import { qs, getQueryParam } from "./core/utils.js";
+import { initThemeSettings } from "./features/settings.js";
+
 
 export function initRouter() {
   const path = window.location.pathname;
@@ -23,24 +25,22 @@ export function initRouter() {
   // Common export/print behavior on pages that have it
   initExport({ store });
 
-  if (path.endsWith("/public/app/editor.html")) {
-    initEditorPage({ store });
+if (path.endsWith("/public/app/editor.html") || path.endsWith("/public/app/edit.html")) {
+  initThemeSettings();     // <-- NEW
+  initEditorPage({ store });
 
-    // Render basic grid
-    renderSchedule({
-      store,
-      root: qs("#grid"),
-      timeAxis: qs("#timeAxis"),
-      dayHeader: qs("#dayHeader"),
-      canvas: qs("#canvas"),
-      readOnly: false
-    });
+  renderSchedule({
+    store,
+    root: qs("#grid"),
+    timeAxis: qs("#timeAxis"),
+    dayHeader: qs("#dayHeader"),
+    canvas: qs("#canvas"),
+    readOnly: false
+  });
 
-    // Enable drag/resize/click interactions
-    initInteractions({ store, canvas: qs("#canvas") });
-
-    return;
-  }
+  initInteractions({ store, canvas: qs("#canvas") });
+  return;
+}
 
   if (path.endsWith("/public/app/view.html") || path.endsWith("/public/app/embed.html")) {
     const isEmbed = path.endsWith("/public/app/embed.html");

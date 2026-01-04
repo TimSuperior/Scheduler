@@ -36,7 +36,8 @@
         <div class="schedule__grid">
           <div class="schedule__axis" id="timeAxis" aria-hidden="true"></div>
           <div class="schedule__days" id="dayHeader" aria-hidden="true"></div>
-          <div class="schedule__canvas" id="canvas" aria-label="Schedule grid"></div>
+          <!-- aria fix: aria-label is permitted because role="region" -->
+          <div class="schedule__canvas" id="canvas" role="region" aria-label="Schedule grid"></div>
         </div>
       </div>
     </section>

@@ -33,36 +33,25 @@
         <div class="panel__section">
           <h2 class="panel__title">Schedule</h2>
 
-          <label class="field">
+          <label class="field" for="scheduleTitle">
             <span class="field__label">Title</span>
-            <input class="input" id="scheduleTitle" type="text" placeholder="My Schedule" />
+            <input class="input" id="scheduleTitle" name="scheduleTitle" type="text" placeholder="My Schedule" />
           </label>
 
           <div class="field-row">
-            <label class="field">
+            <label class="field" for="startTime">
               <span class="field__label">Start</span>
-              <input class="input" id="startTime" type="time" value="08:00" />
+              <input class="input" id="startTime" name="startTime" type="time" value="08:00" />
             </label>
 
-            <label class="field">
+            <label class="field" for="endTime">
               <span class="field__label">End</span>
-              <input class="input" id="endTime" type="time" value="20:00" />
+              <input class="input" id="endTime" name="endTime" type="time" value="20:00" />
             </label>
           </div>
 
-          <label class="field">
-            <span class="field__label">Step</span>
-            <select class="select" id="minuteStep">
-              <option value="5">5 min</option>
-              <option value="10">10 min</option>
-              <option value="15" selected>15 min</option>
-              <option value="30">30 min</option>
-              <option value="60">60 min</option>
-            </select>
-          </label>
-
-          <label class="field field--check">
-            <input id="showWeekend" type="checkbox" checked />
+          <label class="field field--check" for="showWeekend">
+            <input id="showWeekend" name="showWeekend" type="checkbox" checked />
             <span>Show weekend</span>
           </label>
         </div>
@@ -70,22 +59,34 @@
         <div class="panel__section">
           <h2 class="panel__title">Add block</h2>
 
-          <label class="field">
+          <label class="field" for="blockText">
             <span class="field__label">Text</span>
-            <input class="input" id="blockText" type="text" placeholder="Class / Work / Gym" />
+            <input class="input" id="blockText" name="blockText" type="text" placeholder="Class / Work / Gym" />
           </label>
 
-          <label class="field">
+          <label class="field" for="blockColor">
             <span class="field__label">Color</span>
-            <input class="input input--color" id="blockColor" type="color" value="#4f46e5" />
+            <input class="input input--color" id="blockColor" name="blockColor" type="color" value="#4f46e5" />
           </label>
+
+          <div class="field-row">
+            <label class="field" for="taskStartTime">
+              <span class="field__label">Task start</span>
+              <input class="input" id="taskStartTime" name="taskStartTime" type="time" value="09:00" />
+            </label>
+
+            <label class="field" for="taskEndTime">
+              <span class="field__label">Task end</span>
+              <input class="input" id="taskEndTime" name="taskEndTime" type="time" value="10:00" />
+            </label>
+          </div>
 
           <button class="btn btn--primary btn--full" id="btnAddBlock" type="button">
-            Add block (click grid)
+            Add block (pick a day on grid)
           </button>
 
           <p class="muted small">
-            Tip: you will be able to click/drag on the grid once JS interactions are wired.
+            Choose task start/end time, then click the grid to pick the day column.
           </p>
         </div>
 
@@ -96,9 +97,9 @@
             Select a block to edit its details.
           </div>
 
-          <label class="field">
+          <label class="field" for="selectedText">
             <span class="field__label">Selected text</span>
-            <input class="input" id="selectedText" type="text" placeholder="—" disabled />
+            <input class="input" id="selectedText" name="selectedText" type="text" placeholder="—" disabled />
           </label>
 
           <div class="btn-row">
@@ -106,25 +107,93 @@
             <button class="btn btn--danger" id="btnDelete" type="button" disabled>Delete</button>
           </div>
         </div>
+
+        <!-- THEME SETTINGS (DROPDOWN) -->
+        <div class="panel__section panel__section--collapsible" id="themeSettings">
+          <button class="panel__toggle" id="themeToggle" type="button" aria-expanded="false" aria-controls="themeBody">
+            <span class="panel__toggleTitle">Theme</span>
+            <span class="panel__chev" aria-hidden="true"></span>
+          </button>
+
+          <div class="panel__body" id="themeBody" hidden>
+            <div class="btn-row" style="margin-top: 20px;">
+              <button class="btn btn--ghost" id="btnThemeDark" type="button">Dark</button>
+              <button class="btn btn--ghost" id="btnThemeLight" type="button">Light</button>
+              <button class="btn btn--ghost" id="btnThemeOcean" type="button">Ocean</button>
+            </div>
+
+            <div class="field-row">
+              <label class="field">
+                <span class="field__label">Background</span>
+                <input class="input input--color" type="color" data-theme-var="--bg" />
+              </label>
+
+              <label class="field">
+                <span class="field__label">Text</span>
+                <input class="input input--color" type="color" data-theme-var="--text" />
+              </label>
+            </div>
+
+            <div class="field-row">
+              <label class="field">
+                <span class="field__label">Panel</span>
+                <input class="input input--color" type="color" data-theme-var="--panel" />
+              </label>
+
+              <label class="field">
+                <span class="field__label">Card</span>
+                <input class="input input--color" type="color" data-theme-var="--card" />
+              </label>
+            </div>
+
+            <div class="field-row">
+              <label class="field">
+                <span class="field__label">Muted</span>
+                <input class="input input--color" type="color" data-theme-var="--muted" />
+              </label>
+
+              <label class="field">
+                <span class="field__label">Brand</span>
+                <input class="input input--color" type="color" data-theme-var="--brand" />
+              </label>
+            </div>
+
+            <div class="field-row">
+              <label class="field">
+                <span class="field__label">Accent</span>
+                <input class="input input--color" type="color" data-theme-var="--brand2" />
+              </label>
+
+              <label class="field">
+                <span class="field__label">Danger</span>
+                <input class="input input--color" type="color" data-theme-var="--danger" />
+              </label>
+            </div>
+
+            <button class="btn btn--danger btn--full" id="btnThemeReset" type="button">
+              Reset theme
+            </button>
+
+            <p class="muted small" style="margin: 10px 0 0;">
+              Theme settings are saved automatically in your browser.
+            </p>
+          </div>
+        </div>
       </aside>
 
       <section class="stage" aria-label="Schedule Canvas">
         <div class="stage__header">
           <h1 class="stage__title" id="stageTitle">My Schedule</h1>
-          <div class="stage__meta muted" id="stageMeta">08:00 – 20:00 • 15 min steps</div>
+          <div class="stage__meta muted" id="stageMeta">08:00 – 20:00</div>
         </div>
 
         <div class="schedule" id="scheduleRoot">
-          <div class="schedule__toolbar">
-            <button class="btn btn--ghost" id="btnZoomOut" type="button">–</button>
-            <button class="btn btn--ghost" id="btnZoomIn" type="button">+</button>
-            <span class="muted small">Zoom</span>
-          </div>
-
           <div class="schedule__grid" id="grid">
             <div class="schedule__axis" id="timeAxis" aria-hidden="true"></div>
             <div class="schedule__days" id="dayHeader" aria-hidden="true"></div>
-            <div class="schedule__canvas" id="canvas" aria-label="Schedule grid"></div>
+
+            <!-- aria fix: aria-label is permitted because role="region" -->
+            <div class="schedule__canvas" id="canvas" role="region" aria-label="Schedule grid"></div>
           </div>
         </div>
       </section>

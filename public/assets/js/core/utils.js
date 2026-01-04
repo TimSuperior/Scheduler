@@ -1,4 +1,6 @@
 // /public/assets/js/core/utils.js
+import { applySavedTheme } from "./theme.js";
+
 export function qs(sel, root = document) {
   return root.querySelector(sel);
 }
@@ -19,7 +21,6 @@ export function clearEl(node) {
 }
 
 export function uid() {
-  // short id for schedule items
   return Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
 }
 
@@ -38,7 +39,6 @@ export function minsToLabel(mins) {
 }
 
 export function timeInputToMins(val) {
-  // "HH:MM"
   if (!val || !val.includes(":")) return 0;
   const [h, m] = val.split(":").map(Number);
   return (h * 60) + (m || 0);
@@ -56,7 +56,9 @@ export function getQueryParam(name) {
 }
 
 export function bootCommon() {
-  // Hook print buttons if present
+  // Apply saved theme globally (index/editor/view/embed)
+  applySavedTheme();
+
   const btnPrint = qs("#btnPrint");
   if (btnPrint) btnPrint.addEventListener("click", () => window.print());
 }
