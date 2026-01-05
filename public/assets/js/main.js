@@ -1,7 +1,7 @@
-// /public/assets/js/main.js
 import { initRouter } from "./router.js";
 import { bootCommon } from "./core/utils.js";
 import { setScheduleMode, getScheduleMode } from "./core/timeformat.js";
+import { apiShare } from "./core/api.js";
 
 bootCommon();
 initRouter();
@@ -59,8 +59,11 @@ function setupEditorChrome() {
   setupSettingsTabs({ closeModal });
   setupSettingsBindings({ closeModal });
 
-  // Add modal: copy button + auto color + optional forced-day helper
+  // Add modal enhancements
   setupAddModalEnhancements({ closeModal });
+
+  // ✅ Share modal
+  setupShareModal({ openModal, closeModal });
 
   function wire(id, fn) {
     const el = document.getElementById(id);
@@ -144,20 +147,15 @@ function setupSettingsTabs({ closeModal }) {
 
   tabs.forEach((t) => t.addEventListener("click", () => activate(String(t.dataset.tab || "layout"))));
 
-  // Update buttons just close the modal (changes are applied live)
   ["sbSettingsCloseA", "sbSettingsCloseB", "sbSettingsCloseC", "sbSettingsCloseD"].forEach((id) => {
     const btn = document.getElementById(id);
     if (btn) btn.addEventListener("click", () => closeModal("modalSettings"));
   });
 
-  // default
   activate("layout");
 }
 
-/** -------- Settings functionality --------
- * We store new UI settings in localStorage and also push into store.meta (via window.__SB_STORE).
- * Existing settings (title/start/end/weekend) still use your original inputs & listeners (unchanged).
- */
+/** -------- Settings functionality -------- */
 function setupSettingsBindings({ closeModal }) {
   const KEY = "sb_editor_ui_settings_v1";
 
@@ -169,8 +167,8 @@ function setupSettingsBindings({ closeModal }) {
   const defaults = {
     showTitle: "yes",
     showDates: "no",
-    week: "", // type=week value like "2025-W51"
-    clockMode: getScheduleMode(), // "12" | "24"
+    week: "",
+    clockMode: getScheduleMode(),
     minuteStep: 15,
     autoColor: "yes",
     showTimeInEvents: "yes",
@@ -182,7 +180,6 @@ function setupSettingsBindings({ closeModal }) {
 
   const state = load();
 
-  // wire segmented controls
   document.querySelectorAll("#modalSettings .sb-seg").forEach((seg) => {
     seg.addEventListener("click", (e) => {
       const btn = e.target instanceof HTMLElement ? e.target.closest(".sb-segBtn") : null;
@@ -201,7 +198,6 @@ function setupSettingsBindings({ closeModal }) {
     });
   });
 
-  // show weekend -> drive existing checkbox so your editor logic stays unchanged
   const showWeekend = document.getElementById("showWeekend");
   const satBtn = document.getElementById("sbSat");
   const sunBtn = document.getElementById("sbSun");
@@ -231,7 +227,6 @@ function setupSettingsBindings({ closeModal }) {
     showWeekend.dispatchEvent(new Event("change", { bubbles: true }));
   });
 
-  // week input
   const weekInput = document.getElementById("sbWeek");
   if (weekInput) {
     if (state.week) weekInput.value = state.week;
@@ -242,7 +237,6 @@ function setupSettingsBindings({ closeModal }) {
     });
   }
 
-  // start/end hour -> drive existing startTime/endTime inputs (keeps your logic)
   const startHour = document.getElementById("sbStartHour");
   const endHour = document.getElementById("sbEndHour");
   const startTime = document.getElementById("startTime");
@@ -264,7 +258,6 @@ function setupSettingsBindings({ closeModal }) {
   if (startHour) startHour.addEventListener("change", pushHoursToOriginalInputs);
   if (endHour) endHour.addEventListener("change", pushHoursToOriginalInputs);
 
-  // font + color
   const fontSel = document.getElementById("sbFont");
   const colorSel = document.getElementById("sbEventTextColor");
   if (fontSel) {
@@ -284,7 +277,6 @@ function setupSettingsBindings({ closeModal }) {
     });
   }
 
-  // Initialize start/end hour controls from existing time inputs (if they exist)
   if (startTime && startHour) {
     const v = String(startTime.value || "08:00").split(":")[0];
     startHour.value = String(Number(v) || 8);
@@ -294,13 +286,11 @@ function setupSettingsBindings({ closeModal }) {
     endHour.value = String(Number(v) || 20);
   }
 
-  // Apply now
   paintSegs();
   syncWeekendButtons();
   apply();
 
   function paintSegs() {
-    // for each seg, set active button based on saved state
     document.querySelectorAll("#modalSettings .sb-seg").forEach((seg) => {
       const setting = seg.getAttribute("data-setting");
       if (!setting) return;
@@ -311,15 +301,12 @@ function setupSettingsBindings({ closeModal }) {
   }
 
   function apply() {
-    // clock mode
     if (state.clockMode === "12" || state.clockMode === "24") setScheduleMode(state.clockMode);
 
-    // apply UI-only classes
     document.body.classList.toggle("sb-hide-title", state.showTitle === "no");
     document.body.classList.toggle("sb-center-text", state.centerText === "yes");
     document.body.classList.toggle("sb-stretch-text", state.stretchText === "yes");
 
-    // push into store.meta for render options
     const s = store();
     if (s && s.state && s.state.meta) {
       s.state.meta.minuteStep = Number(state.minuteStep) || 15;
@@ -331,11 +318,9 @@ function setupSettingsBindings({ closeModal }) {
       s.state.meta.eventTextColor = state.eventTextColor || defaults.eventTextColor;
     }
 
-    // css vars for font & block text color
     document.documentElement.style.setProperty("--sb-font", state.fontFamily || defaults.fontFamily);
     document.documentElement.style.setProperty("--sb-event-text", state.eventTextColor || defaults.eventTextColor);
 
-    // week label
     const weekLabel = document.getElementById("sbWeekLabel");
     if (weekLabel) weekLabel.textContent = state.week ? `Week ${state.week}` : "This week";
 
@@ -366,7 +351,6 @@ function setupSettingsBindings({ closeModal }) {
 function setupAddModalEnhancements({ closeModal }) {
   const store = () => window.__SB_STORE || null;
 
-  // Copy button -> uses your existing Duplicate logic
   const copyBtn = document.getElementById("sbCopySelection");
   if (copyBtn) {
     copyBtn.addEventListener("click", () => {
@@ -375,7 +359,6 @@ function setupAddModalEnhancements({ closeModal }) {
     });
   }
 
-  // Auto-color button: picks a stable color from text
   const autoColorBtn = document.getElementById("sbAutoColorBtn");
   const txt = document.getElementById("blockText");
   const color = document.getElementById("blockColor");
@@ -387,7 +370,6 @@ function setupAddModalEnhancements({ closeModal }) {
       h ^= s.charCodeAt(i);
       h = Math.imul(h, 16777619);
     }
-    // generate a nice-ish hue
     const hue = Math.abs(h) % 360;
     return hslToHex(hue, 74, 55);
   }
@@ -429,7 +411,6 @@ function setupAddModalEnhancements({ closeModal }) {
   if (autoColorBtn) autoColorBtn.addEventListener("click", applyAutoColor);
   if (txt) txt.addEventListener("blur", applyAutoColor);
 
-  // Day buttons: optional forced-day helper (does NOT break your original flow)
   let forcedDay = null;
   const dayWrap = document.getElementById("sbAddDays");
   if (dayWrap) {
@@ -446,8 +427,6 @@ function setupAddModalEnhancements({ closeModal }) {
     });
   }
 
-  // Keep your existing "pick a day on grid" logic, but if user selected a day,
-  // we force the click to land inside that day column by dispatching a synthetic click.
   const canvas = document.getElementById("canvas");
   const btnAddBlock = document.getElementById("btnAddBlock");
 
@@ -455,9 +434,7 @@ function setupAddModalEnhancements({ closeModal }) {
 
   if (btnAddBlock) {
     btnAddBlock.addEventListener("click", () => {
-      // existing logic in your editor.js will run; we just "arm" the next grid click
       armed = true;
-      // close modal so grid is visible
       setTimeout(() => closeModal("modalAdd"), 0);
     });
   }
@@ -467,9 +444,8 @@ function setupAddModalEnhancements({ closeModal }) {
       if (!armed) return;
       armed = false;
 
-      if (forcedDay == null) return; // no forcing
+      if (forcedDay == null) return;
 
-      // Stop original click and re-dispatch at a forced X inside the chosen column
       e.preventDefault();
       e.stopImmediatePropagation();
 
@@ -479,7 +455,7 @@ function setupAddModalEnhancements({ closeModal }) {
       const colW = rect.width / (daysCount || 7);
 
       const x = rect.left + (forcedDay + 0.5) * colW;
-      const y = e.clientY; // keep same y
+      const y = e.clientY;
 
       const ev = new MouseEvent("click", {
         bubbles: true,
@@ -489,6 +465,326 @@ function setupAddModalEnhancements({ closeModal }) {
       });
 
       canvas.dispatchEvent(ev);
-    }, true); // capture, so we can replace before interactions handler
+    }, true);
+  }
+}
+
+/** ✅ Share modal implementation (no auth -> "My links" stored in localStorage) */
+function setupShareModal({ openModal, closeModal }) {
+  const btnShare = document.getElementById("btnShare");
+  const modal = document.getElementById("modalShare");
+  if (!btnShare || !modal) return;
+
+  const LS_KEY = "sb_my_share_links_v1";
+
+  const tabBtns = Array.from(modal.querySelectorAll(".share-tab"));
+  const panels = Array.from(modal.querySelectorAll(".share-panel"));
+
+  const btnCreate = document.getElementById("shareCreateLink");
+  const btnEmbed = document.getElementById("shareGetEmbed");
+
+  const statusEl = document.getElementById("shareStatus");
+
+  const resultBox = document.getElementById("shareResult");
+  const directInput = document.getElementById("shareDirectInput");
+  const copyDirectBtn = document.getElementById("shareCopyDirect");
+  const openDirectA = document.getElementById("shareOpenDirect");
+
+  const embedBox = document.getElementById("shareEmbed");
+  const embedTextarea = document.getElementById("shareEmbedTextarea");
+  const copyEmbedBtn = document.getElementById("shareCopyEmbed");
+  const openEmbedA = document.getElementById("shareOpenEmbed");
+
+  const linksList = document.getElementById("shareLinksList");
+  const linksEmpty = document.getElementById("shareLinksEmpty");
+
+  let currentId = null;
+
+  // IMPORTANT: intercept any old Share handler to remove "Share failed"
+  btnShare.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+
+    // reset button text if someone changed it before
+    btnShare.textContent = "Share";
+    btnShare.classList.remove("btn--danger");
+
+    openModal("modalShare");
+    activateTab("share");
+    resetShareUI();
+    renderMyLinks();
+  }, true);
+
+  // Tabs
+  tabBtns.forEach((b) => b.addEventListener("click", () => activateTab(String(b.dataset.tab || "share"))));
+
+  function activateTab(name) {
+    tabBtns.forEach((t) => {
+      const on = t.dataset.tab === name;
+      t.classList.toggle("is-active", on);
+      t.setAttribute("aria-selected", on ? "true" : "false");
+    });
+    panels.forEach((p) => p.classList.toggle("is-active", p.dataset.panel === name));
+
+    if (name === "links") renderMyLinks();
+  }
+
+  function resetShareUI() {
+    currentId = null;
+    if (statusEl) statusEl.textContent = "";
+    if (resultBox) resultBox.hidden = true;
+    if (embedBox) embedBox.hidden = true;
+    if (directInput) directInput.value = "";
+    if (embedTextarea) embedTextarea.value = "";
+    if (openDirectA) openDirectA.href = "#";
+    if (openEmbedA) openEmbedA.href = "#";
+  }
+
+  function setStatus(msg) {
+    if (!statusEl) return;
+    statusEl.textContent = msg || "";
+  }
+
+  function setBusy(on) {
+    const v = !!on;
+    if (btnCreate) btnCreate.disabled = v;
+    if (btnEmbed) btnEmbed.disabled = v;
+  }
+
+  function getSchedulePayload() {
+    // safest payload for your validate_schedule(): only meta + items
+    const s = window.__SB_STORE && window.__SB_STORE.state ? window.__SB_STORE.state : null;
+    if (!s || typeof s !== "object") throw new Error("No schedule data found.");
+
+    const meta = s.meta && typeof s.meta === "object" ? s.meta : {};
+    const items = Array.isArray(s.items) ? s.items : [];
+
+    return { meta, items };
+  }
+
+  function getTitleForLink() {
+    const titleEl = document.getElementById("stageTitle");
+    const t = titleEl ? titleEl.textContent : "";
+    return (t && t.trim()) ? t.trim() : "Schedule";
+  }
+
+  function urlsFor(id) {
+    const o = window.location.origin;
+    const safe = encodeURIComponent(id);
+    const directUrl = `${o}/server/pages/s.php?id=${safe}`;
+    const embedUrl = `${o}/server/pages/embed.php?id=${safe}`;
+    return { directUrl, embedUrl };
+  }
+
+  function embedCodeFor(embedUrl) {
+    return `<iframe src="${embedUrl}" style="width:100%;height:650px;border:0;border-radius:12px;overflow:hidden" loading="lazy"></iframe>`;
+  }
+
+  function loadLinks() {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function saveLinks(arr) {
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify(arr));
+    } catch {
+      // ignore
+    }
+  }
+
+  function upsertLink(id, title) {
+    const list = loadLinks();
+    const now = Date.now();
+    const existing = list.find((x) => x && x.id === id);
+    if (existing) {
+      existing.title = title || existing.title;
+      existing.updatedAt = now;
+    } else {
+      list.unshift({ id, title: title || "Schedule", createdAt: now, updatedAt: now });
+    }
+    saveLinks(list.slice(0, 50));
+  }
+
+  async function ensureShareId() {
+    if (currentId) return currentId;
+
+    setBusy(true);
+    setStatus("Creating link…");
+    try {
+      const payload = getSchedulePayload();
+      const r = await apiShare(payload);
+      currentId = r.id;
+
+      upsertLink(currentId, getTitleForLink());
+
+      setStatus("");
+      return currentId;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function showDirect() {
+    try {
+      const id = await ensureShareId();
+      const { directUrl, embedUrl } = urlsFor(id);
+
+      if (directInput) directInput.value = directUrl;
+      if (openDirectA) openDirectA.href = directUrl;
+
+      if (resultBox) resultBox.hidden = false;
+
+      // keep embed ready too (so switching is instant)
+      if (embedTextarea) embedTextarea.value = embedCodeFor(embedUrl);
+      if (openEmbedA) openEmbedA.href = embedUrl;
+    } catch (err) {
+      setStatus(String(err && err.message ? err.message : err));
+      flashShareButtonError();
+    }
+  }
+
+  async function showEmbed() {
+    try {
+      const id = await ensureShareId();
+      const { embedUrl } = urlsFor(id);
+
+      if (embedTextarea) embedTextarea.value = embedCodeFor(embedUrl);
+      if (openEmbedA) openEmbedA.href = embedUrl;
+
+      if (embedBox) embedBox.hidden = false;
+    } catch (err) {
+      setStatus(String(err && err.message ? err.message : err));
+      flashShareButtonError();
+    }
+  }
+
+  function flashShareButtonError() {
+    // shows the old behavior only briefly, then returns to Share
+    btnShare.textContent = "Share failed";
+    btnShare.classList.add("btn--danger");
+    setTimeout(() => {
+      btnShare.textContent = "Share";
+      btnShare.classList.remove("btn--danger");
+    }, 1400);
+  }
+
+  async function copyText(text) {
+    const t = String(text || "");
+    if (!t) return false;
+
+    try {
+      await navigator.clipboard.writeText(t);
+      return true;
+    } catch {
+      // fallback
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = t;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+  }
+
+  // Buttons
+  if (btnCreate) btnCreate.addEventListener("click", showDirect);
+  if (btnEmbed) btnEmbed.addEventListener("click", showEmbed);
+
+  if (copyDirectBtn) {
+    copyDirectBtn.addEventListener("click", async () => {
+      const ok = await copyText(directInput ? directInput.value : "");
+      setStatus(ok ? "Copied direct link." : "Copy failed.");
+      setTimeout(() => setStatus(""), 900);
+    });
+  }
+
+  if (copyEmbedBtn) {
+    copyEmbedBtn.addEventListener("click", async () => {
+      const ok = await copyText(embedTextarea ? embedTextarea.value : "");
+      setStatus(ok ? "Copied embed code." : "Copy failed.");
+      setTimeout(() => setStatus(""), 900);
+    });
+  }
+
+  function renderMyLinks() {
+    if (!linksList || !linksEmpty) return;
+
+    const list = loadLinks();
+    linksList.innerHTML = "";
+
+    const has = list.length > 0;
+    linksEmpty.style.display = has ? "none" : "block";
+
+    if (!has) return;
+
+    const fmt = new Intl.DateTimeFormat(undefined, { year: "numeric", month: "short", day: "2-digit" });
+
+    list.forEach((x) => {
+      if (!x || !x.id) return;
+      const { directUrl, embedUrl } = urlsFor(x.id);
+      const embedCode = embedCodeFor(embedUrl);
+
+      const row = document.createElement("div");
+      row.className = "share-link";
+
+      const left = document.createElement("div");
+      left.className = "share-link__left";
+
+      const title = document.createElement("div");
+      title.className = "share-link__title";
+      title.textContent = x.title || "Schedule";
+
+      const meta = document.createElement("div");
+      meta.className = "share-link__meta";
+      meta.textContent = `ID: ${x.id} • ${x.createdAt ? fmt.format(new Date(x.createdAt)) : ""}`;
+
+      left.appendChild(title);
+      left.appendChild(meta);
+
+      const actions = document.createElement("div");
+      actions.className = "share-link__actions";
+
+      const bOpen = mkBtn("Open", () => window.open(directUrl, "_blank", "noopener"));
+      const bCopy = mkBtn("Copy link", async () => { await copyText(directUrl); setStatus("Copied."); setTimeout(() => setStatus(""), 800); });
+      const bEmbed = mkBtn("Copy embed", async () => { await copyText(embedCode); setStatus("Copied embed."); setTimeout(() => setStatus(""), 900); });
+      const bDel = mkBtn("Remove", () => {
+        const next = loadLinks().filter((y) => y && y.id !== x.id);
+        saveLinks(next);
+        renderMyLinks();
+      });
+      bDel.classList.add("share-btn--danger");
+
+      actions.appendChild(bOpen);
+      actions.appendChild(bCopy);
+      actions.appendChild(bEmbed);
+      actions.appendChild(bDel);
+
+      row.appendChild(left);
+      row.appendChild(actions);
+
+      linksList.appendChild(row);
+    });
+
+    function mkBtn(label, fn) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "share-btn share-btn--sm";
+      b.textContent = label;
+      b.addEventListener("click", fn);
+      return b;
+    }
   }
 }

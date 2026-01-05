@@ -14,6 +14,33 @@ function respond(int $status, array $data): void {
     exit;
 }
 
+function ensure_schema(PDO $pdo): void {
+    // Works on SQLite and most PDO drivers
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS schedules (
+            id VARCHAR(32) PRIMARY KEY,
+            data TEXT NOT NULL,
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL
+        )
+    ");
+}
+
+function is_duplicate_error(Throwable $e): bool {
+    if (!($e instanceof PDOException)) return false;
+    $info = $e->errorInfo ?? null;
+
+    // SQLite constraint: 19
+    if (is_array($info) && isset($info[1]) && (int)$info[1] === 19) return true;
+    // MySQL duplicate: 1062
+    if (is_array($info) && isset($info[1]) && (int)$info[1] === 1062) return true;
+
+    // SQLSTATE for integrity constraint violation
+    if ($e->getCode() === '23000') return true;
+
+    return false;
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     respond(405, ['error' => 'Method not allowed. Use POST.']);
 }
@@ -23,7 +50,7 @@ if ($raw === false || trim($raw) === '') {
     respond(400, ['error' => 'Empty request body.']);
 }
 
-if (strlen($raw) > 200000) { // ~200 KB limit
+if (strlen($raw) > 200000) {
     respond(413, ['error' => 'Payload too large.']);
 }
 
@@ -39,26 +66,28 @@ if (!$ok) {
 
 try {
     $pdo = db();
-    $now = time();
+    ensure_schema($pdo);
 
-    // Store canonical JSON string (re-encode)
+    $now = time();
     $json = json_encode($data, JSON_UNESCAPED_UNICODE);
 
-    // Generate unique id
-    $id = '';
-    for ($i = 0; $i < 8; $i++) {
-        $try = new_id(10);
-        $stmt = $pdo->prepare('INSERT OR IGNORE INTO schedules (id, data, created_at, updated_at) VALUES (:id, :data, :c, :u)');
-        $stmt->execute([
-            ':id' => $try,
-            ':data' => $json,
-            ':c' => $now,
-            ':u' => $now
-        ]);
+    $stmt = $pdo->prepare('INSERT INTO schedules (id, data, created_at, updated_at) VALUES (:id, :data, :c, :u)');
 
-        if ($stmt->rowCount() === 1) {
+    $id = '';
+    for ($i = 0; $i < 12; $i++) {
+        $try = new_id(10);
+        try {
+            $stmt->execute([
+                ':id' => $try,
+                ':data' => $json,
+                ':c' => $now,
+                ':u' => $now
+            ]);
             $id = $try;
             break;
+        } catch (Throwable $e) {
+            if (is_duplicate_error($e)) continue;
+            throw $e;
         }
     }
 

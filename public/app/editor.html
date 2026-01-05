@@ -88,7 +88,7 @@
        MODALS
        ========================= -->
 
-  <!-- ADD EVENT (UI like your screenshot, but keeps your existing IDs + "pick day on grid" logic) -->
+  <!-- ADD EVENT -->
   <div class="modal-overlay" id="modalAdd" hidden>
     <div class="modal modal--light" role="dialog" aria-modal="true" aria-labelledby="modalAddTitle">
       <div class="modal__head modal__head--light">
@@ -102,18 +102,15 @@
       <div class="modal__body modal__body--light">
         <div class="sb-form">
 
-          <!-- Title -->
           <div class="sb-row">
             <div class="sb-leftIcon" aria-hidden="true">🏷</div>
             <div class="sb-field">
               <div class="sb-label">Title</div>
-              <!-- KEEP EXISTING ID -->
               <input class="sb-input" id="blockText" name="blockText" type="text" placeholder="Class / Work / Gym" />
             </div>
             <button class="sb-miniBtn" type="button" id="sbAutoColorBtn" title="Auto color">🎨</button>
           </div>
 
-          <!-- Days (visual like screenshot; optional force-day helper) -->
           <div class="sb-row">
             <div class="sb-leftIcon" aria-hidden="true">📆</div>
             <div class="sb-field">
@@ -131,20 +128,17 @@
             </div>
           </div>
 
-          <!-- Time -->
           <div class="sb-row">
             <div class="sb-leftIcon" aria-hidden="true">⏳</div>
             <div class="sb-field">
               <div class="sb-label">Start time - End time</div>
               <div class="sb-two">
-                <!-- KEEP EXISTING IDs -->
                 <input class="sb-input" id="taskStartTime" name="taskStartTime" type="time" value="09:00" />
                 <input class="sb-input" id="taskEndTime" name="taskEndTime" type="time" value="10:00" />
               </div>
             </div>
           </div>
 
-          <!-- Description (new UI only; doesn't break your existing logic) -->
           <div class="sb-row">
             <div class="sb-leftIcon" aria-hidden="true">ℹ</div>
             <div class="sb-field">
@@ -153,7 +147,6 @@
             </div>
           </div>
 
-          <!-- Color (keeps your existing ID) -->
           <div class="sb-row">
             <div class="sb-leftIcon" aria-hidden="true">🎨</div>
             <div class="sb-field">
@@ -164,7 +157,6 @@
 
           <div class="sb-actions">
             <button class="sb-btn sb-btn--ghost" id="sbCopySelection" type="button">Copy</button>
-            <!-- KEEP EXISTING ID -->
             <button class="sb-btn sb-btn--primary" id="btnAddBlock" type="button">Add</button>
           </div>
         </div>
@@ -172,7 +164,7 @@
     </div>
   </div>
 
-  <!-- SETTINGS (Tabbed like your screenshots; keeps your original inputs so existing logic still works) -->
+  <!-- SETTINGS -->
   <div class="modal-overlay" id="modalSettings" hidden>
     <div class="modal modal--light" role="dialog" aria-modal="true" aria-labelledby="modalSettingsTitle">
       <div class="modal__head modal__head--light">
@@ -191,7 +183,6 @@
           <button class="sb-tab" type="button" role="tab" aria-selected="false" data-tab="font">Font</button>
         </div>
 
-        <!-- LAYOUT TAB -->
         <div class="sb-panel is-active" data-panel="layout" role="tabpanel">
           <div class="sb-row">
             <div class="sb-leftIcon" aria-hidden="true">🏷</div>
@@ -214,11 +205,9 @@
                 <button class="sb-day is-on" type="button" data-day="2" disabled>Wed</button>
                 <button class="sb-day is-on" type="button" data-day="3" disabled>Thu</button>
                 <button class="sb-day is-on" type="button" data-day="4" disabled>Fri</button>
-                <!-- weekend maps to your existing showWeekend checkbox -->
                 <button class="sb-day is-on" type="button" data-day="5" id="sbSat">Sat</button>
                 <button class="sb-day is-on" type="button" data-day="6" id="sbSun">Sun</button>
               </div>
-              <!-- KEEP EXISTING ID for existing logic -->
               <label class="sb-hiddenCheck">
                 <input id="showWeekend" name="showWeekend" type="checkbox" checked />
                 <span>Show weekend</span>
@@ -245,7 +234,6 @@
           <button class="sb-btn sb-btn--outline" type="button" id="sbSettingsCloseA">Update</button>
         </div>
 
-        <!-- TIME TAB -->
         <div class="sb-panel" data-panel="time" role="tabpanel">
           <div class="sb-row">
             <div class="sb-leftIcon" aria-hidden="true">🕒</div>
@@ -275,12 +263,10 @@
             <div class="sb-field">
               <div class="sb-label">Start hour - End hour</div>
               <div class="sb-two">
-                <!-- These drive your existing startTime/endTime inputs to keep your logic -->
                 <input class="sb-input" id="sbStartHour" type="number" min="0" max="23" step="1" value="8" />
                 <input class="sb-input" id="sbEndHour" type="number" min="0" max="23" step="1" value="20" />
               </div>
 
-              <!-- KEEP existing IDs so your current editor logic continues -->
               <div class="sb-hidden">
                 <input class="input" id="startTime" name="startTime" type="time" value="08:00" />
                 <input class="input" id="endTime" name="endTime" type="time" value="20:00" />
@@ -291,7 +277,6 @@
           <button class="sb-btn sb-btn--outline" type="button" id="sbSettingsCloseB">Update</button>
         </div>
 
-        <!-- EVENT TAB -->
         <div class="sb-panel" data-panel="event" role="tabpanel">
           <div class="sb-row">
             <div class="sb-leftIcon" aria-hidden="true">🎨</div>
@@ -340,7 +325,6 @@
           <button class="sb-btn sb-btn--outline" type="button" id="sbSettingsCloseC">Update</button>
         </div>
 
-        <!-- FONT TAB -->
         <div class="sb-panel" data-panel="font" role="tabpanel">
           <div class="sb-row">
             <div class="sb-leftIcon" aria-hidden="true">A</div>
@@ -364,7 +348,6 @@
             </div>
           </div>
 
-          <!-- Keep existing schedule title input for your current logic -->
           <div class="sb-hidden">
             <input class="input" id="scheduleTitle" name="scheduleTitle" type="text" placeholder="My Schedule" />
           </div>
@@ -385,13 +368,11 @@
       <div class="modal__body">
         <div class="modal__card">
           <div class="panel__section panel__section--collapsible" id="themeSettings" style="margin:0;">
-            <!-- START COLLAPSED (fix your issue) -->
             <button class="panel__toggle" id="themeToggle" type="button" aria-expanded="false" aria-controls="themeBody">
               <span class="panel__toggleTitle">Theme</span>
               <span class="panel__chev" aria-hidden="true"></span>
             </button>
 
-            <!-- hidden by default -->
             <div class="panel__body" id="themeBody" hidden>
               <div class="btn-row" style="margin-top: 12px;">
                 <button class="btn btn--ghost" id="btnThemeDark" type="button">Dark</button>
@@ -505,6 +486,67 @@
             <button class="btn btn--danger" id="resetNewSchedule" type="button">New schedule</button>
             <button class="btn btn--ghost" id="resetThemeOnly" type="button">Reset theme</button>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ✅ SHARE -->
+  <div class="modal-overlay" id="modalShare" hidden>
+    <div class="modal modal--light share-modal" role="dialog" aria-modal="true" aria-labelledby="modalShareTitle">
+      <div class="modal__head modal__head--light">
+        <div class="modal__title modal__title--light" id="modalShareTitle">
+          <span class="modal__icon" aria-hidden="true">↗</span>
+          Share schedule
+        </div>
+        <button class="iconbtn iconbtn--light" type="button" data-modal-close aria-label="Close">×</button>
+      </div>
+
+      <div class="modal__body modal__body--light">
+        <div class="share-tabs" role="tablist" aria-label="Share tabs">
+          <button class="share-tab is-active" type="button" role="tab" aria-selected="true" data-tab="share">Share</button>
+          <button class="share-tab" type="button" role="tab" aria-selected="false" data-tab="links">My links</button>
+        </div>
+
+        <div class="share-panel is-active" data-panel="share" role="tabpanel">
+          <button class="share-card" id="shareCreateLink" type="button">
+            <span>Create direct link</span>
+            <span class="share-card__icon" aria-hidden="true">↗</span>
+          </button>
+
+          <button class="share-card" id="shareGetEmbed" type="button">
+            <span>Get Embed code</span>
+            <span class="share-card__icon" aria-hidden="true">&lt;/&gt;</span>
+          </button>
+
+          <div class="share-status muted" id="shareStatus" aria-live="polite"></div>
+
+          <div class="share-result" id="shareResult" hidden>
+            <div class="share-label">Direct link</div>
+            <div class="share-row">
+              <input class="share-input" id="shareDirectInput" type="text" readonly />
+              <button class="share-btn" id="shareCopyDirect" type="button" title="Copy">Copy</button>
+              <a class="share-btn share-btn--icon" id="shareOpenDirect" href="#" target="_blank" rel="noopener" title="Open">↗</a>
+            </div>
+          </div>
+
+          <div class="share-embed" id="shareEmbed" hidden>
+            <div class="share-label">Embed code</div>
+            <textarea class="share-textarea" id="shareEmbedTextarea" rows="4" readonly></textarea>
+            <div class="share-actions-row">
+              <button class="share-btn" id="shareCopyEmbed" type="button">Copy</button>
+              <a class="share-btn share-btn--icon" id="shareOpenEmbed" href="#" target="_blank" rel="noopener" title="Open embed page">↗</a>
+            </div>
+          </div>
+
+          <div class="share-hint muted small">
+            Note: sharing works only when the site is served through PHP (hosting/Apache). A plain static server cannot run <code>server/api/*.php</code>.
+          </div>
+        </div>
+
+        <div class="share-panel" data-panel="links" role="tabpanel">
+          <div class="share-links" id="shareLinksList"></div>
+          <div class="share-empty muted" id="shareLinksEmpty">No shared links yet.</div>
         </div>
       </div>
     </div>

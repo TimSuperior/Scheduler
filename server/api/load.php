@@ -13,19 +13,30 @@ function respond(int $status, array $data): void {
     exit;
 }
 
+function ensure_schema(PDO $pdo): void {
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS schedules (
+            id VARCHAR(32) PRIMARY KEY,
+            data TEXT NOT NULL,
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL
+        )
+    ");
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     respond(405, ['error' => 'Method not allowed. Use GET.']);
 }
 
-$id = (string)($_GET['id'] ?? '');
-$id = trim($id);
-
+$id = trim((string)($_GET['id'] ?? ''));
 if (!is_valid_id($id)) {
     respond(400, ['error' => 'Invalid id.']);
 }
 
 try {
     $pdo = db();
+    ensure_schema($pdo);
+
     $stmt = $pdo->prepare('SELECT data FROM schedules WHERE id = :id LIMIT 1');
     $stmt->execute([':id' => $id]);
     $row = $stmt->fetch();
@@ -34,7 +45,6 @@ try {
         respond(404, ['error' => 'Not found.']);
     }
 
-    // Return the stored JSON (as an object), not wrapped
     $decoded = json_decode($row['data'], true);
     if (!is_array($decoded)) {
         respond(500, ['error' => 'Corrupted data.']);
