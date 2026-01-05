@@ -1,5 +1,6 @@
 // /public/assets/js/core/utils.js
 import { applySavedTheme } from "./theme.js";
+import { formatMins } from "./timeformat.js";
 
 export function qs(sel, root = document) {
   return root.querySelector(sel);
@@ -32,10 +33,9 @@ export function roundToStep(v, step) {
   return Math.round(v / step) * step;
 }
 
+// UPDATED: respects 12/24 mode from timeformat.js
 export function minsToLabel(mins) {
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  return formatMins(mins);
 }
 
 export function timeInputToMins(val) {

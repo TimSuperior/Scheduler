@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="/public/assets/css/base.css" />
   <link rel="stylesheet" href="/public/assets/css/layout.css" />
   <link rel="stylesheet" href="/public/assets/css/schedule.css" />
+  <link rel="stylesheet" href="/public/assets/css/style.css" />
   <link rel="stylesheet" href="/public/assets/css/print.css" media="print" />
 </head>
 <body class="page page--editor">
@@ -21,6 +22,7 @@
         <span class="crumb">Editor</span>
       </div>
 
+      <!-- Keep existing buttons for existing logic -->
       <div class="topbar__right">
         <button class="btn btn--ghost" id="btnNew" type="button">New</button>
         <button class="btn btn--ghost" id="btnPrint" type="button">Print</button>
@@ -29,70 +31,445 @@
     </header>
 
     <main class="workspace">
-      <aside class="panel" aria-label="Editor Controls">
-        <div class="panel__section">
-          <h2 class="panel__title">Schedule</h2>
+      <!-- STAGE FIRST (big area) -->
+      <section class="stage" aria-label="Schedule Canvas">
+        <div class="stage__header">
+          <h1 class="stage__title" id="stageTitle">My Schedule</h1>
+          <div class="stage__meta muted" id="stageMeta">08:00 – 20:00</div>
+        </div>
 
-          <label class="field" for="scheduleTitle">
-            <span class="field__label">Title</span>
+        <div class="schedule" id="scheduleRoot">
+          <div class="schedule__grid" id="grid">
+            <div class="schedule__axis" id="timeAxis" aria-hidden="true"></div>
+            <div class="schedule__days" id="dayHeader" aria-hidden="true"></div>
+            <div class="schedule__canvas" id="canvas" role="region" aria-label="Schedule grid"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT ACTION PANEL -->
+      <aside class="sidepanel" aria-label="Actions">
+        <button class="sidebtn sidebtn--primary" id="sideAdd" type="button">
+          <span>Add</span><span class="sidebtn__icon">＋</span>
+        </button>
+
+        <button class="sidebtn" id="sideSettings" type="button">
+          <span>Settings</span><span class="sidebtn__icon">⚙</span>
+        </button>
+
+        <button class="sidebtn" id="sideBackground" type="button">
+          <span>Background</span><span class="sidebtn__icon">🖼</span>
+        </button>
+
+        <button class="sidebtn" id="sideSelection" type="button">
+          <span>Selection</span><span class="sidebtn__icon">✎</span>
+        </button>
+
+        <button class="sidebtn" id="sideShare" type="button">
+          <span>Share</span><span class="sidebtn__icon">↗</span>
+        </button>
+
+        <button class="sidebtn sidebtn--danger" id="sideReset" type="button">
+          <span>Reset</span><span class="sidebtn__icon">🧹</span>
+        </button>
+
+        <div class="sidepanel__spacer"></div>
+
+        <div class="sidepanel__mini" aria-label="Quick actions">
+          <button class="tilebtn" id="sideNew" type="button" title="New">🗋</button>
+          <button class="tilebtn" id="sidePrint" type="button" title="Print">🖨</button>
+          <button class="tilebtn" id="sideQuickShare" type="button" title="Share">⤴</button>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <!-- =========================
+       MODALS
+       ========================= -->
+
+  <!-- ADD EVENT (UI like your screenshot, but keeps your existing IDs + "pick day on grid" logic) -->
+  <div class="modal-overlay" id="modalAdd" hidden>
+    <div class="modal modal--light" role="dialog" aria-modal="true" aria-labelledby="modalAddTitle">
+      <div class="modal__head modal__head--light">
+        <div class="modal__title modal__title--light" id="modalAddTitle">
+          <span class="modal__icon" aria-hidden="true">📅</span>
+          Add event
+        </div>
+        <button class="iconbtn iconbtn--light" type="button" data-modal-close aria-label="Close">×</button>
+      </div>
+
+      <div class="modal__body modal__body--light">
+        <div class="sb-form">
+
+          <!-- Title -->
+          <div class="sb-row">
+            <div class="sb-leftIcon" aria-hidden="true">🏷</div>
+            <div class="sb-field">
+              <div class="sb-label">Title</div>
+              <!-- KEEP EXISTING ID -->
+              <input class="sb-input" id="blockText" name="blockText" type="text" placeholder="Class / Work / Gym" />
+            </div>
+            <button class="sb-miniBtn" type="button" id="sbAutoColorBtn" title="Auto color">🎨</button>
+          </div>
+
+          <!-- Days (visual like screenshot; optional force-day helper) -->
+          <div class="sb-row">
+            <div class="sb-leftIcon" aria-hidden="true">📆</div>
+            <div class="sb-field">
+              <div class="sb-label">Day(s)</div>
+              <div class="sb-days" id="sbAddDays" role="group" aria-label="Pick day">
+                <button class="sb-day" type="button" data-day="0">Mon</button>
+                <button class="sb-day" type="button" data-day="1">Tue</button>
+                <button class="sb-day" type="button" data-day="2">Wed</button>
+                <button class="sb-day" type="button" data-day="3">Thu</button>
+                <button class="sb-day" type="button" data-day="4">Fri</button>
+                <button class="sb-day" type="button" data-day="5">Sat</button>
+                <button class="sb-day" type="button" data-day="6">Sun</button>
+              </div>
+              <div class="sb-hint">Tip: select a day here, then click the grid to place it (still works with your current “pick day on grid” flow).</div>
+            </div>
+          </div>
+
+          <!-- Time -->
+          <div class="sb-row">
+            <div class="sb-leftIcon" aria-hidden="true">⏳</div>
+            <div class="sb-field">
+              <div class="sb-label">Start time - End time</div>
+              <div class="sb-two">
+                <!-- KEEP EXISTING IDs -->
+                <input class="sb-input" id="taskStartTime" name="taskStartTime" type="time" value="09:00" />
+                <input class="sb-input" id="taskEndTime" name="taskEndTime" type="time" value="10:00" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Description (new UI only; doesn't break your existing logic) -->
+          <div class="sb-row">
+            <div class="sb-leftIcon" aria-hidden="true">ℹ</div>
+            <div class="sb-field">
+              <div class="sb-label">Description</div>
+              <textarea class="sb-textarea" id="sbDesc" placeholder=""></textarea>
+            </div>
+          </div>
+
+          <!-- Color (keeps your existing ID) -->
+          <div class="sb-row">
+            <div class="sb-leftIcon" aria-hidden="true">🎨</div>
+            <div class="sb-field">
+              <div class="sb-label">Color</div>
+              <input class="sb-input sb-input--color" id="blockColor" name="blockColor" type="color" value="#4f46e5" />
+            </div>
+          </div>
+
+          <div class="sb-actions">
+            <button class="sb-btn sb-btn--ghost" id="sbCopySelection" type="button">Copy</button>
+            <!-- KEEP EXISTING ID -->
+            <button class="sb-btn sb-btn--primary" id="btnAddBlock" type="button">Add</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS (Tabbed like your screenshots; keeps your original inputs so existing logic still works) -->
+  <div class="modal-overlay" id="modalSettings" hidden>
+    <div class="modal modal--light" role="dialog" aria-modal="true" aria-labelledby="modalSettingsTitle">
+      <div class="modal__head modal__head--light">
+        <div class="modal__title modal__title--light" id="modalSettingsTitle">
+          <span class="modal__icon" aria-hidden="true">🗓</span>
+          Schedule settings
+        </div>
+        <button class="iconbtn iconbtn--light" type="button" data-modal-close aria-label="Close">×</button>
+      </div>
+
+      <div class="modal__body modal__body--light">
+        <div class="sb-tabs" role="tablist" aria-label="Settings tabs">
+          <button class="sb-tab is-active" type="button" role="tab" aria-selected="true" data-tab="layout">Layout</button>
+          <button class="sb-tab" type="button" role="tab" aria-selected="false" data-tab="time">Time</button>
+          <button class="sb-tab" type="button" role="tab" aria-selected="false" data-tab="event">Event</button>
+          <button class="sb-tab" type="button" role="tab" aria-selected="false" data-tab="font">Font</button>
+        </div>
+
+        <!-- LAYOUT TAB -->
+        <div class="sb-panel is-active" data-panel="layout" role="tabpanel">
+          <div class="sb-row">
+            <div class="sb-leftIcon" aria-hidden="true">🏷</div>
+            <div class="sb-field">
+              <div class="sb-label">Show title</div>
+              <div class="sb-seg" data-setting="showTitle">
+                <button type="button" class="sb-segBtn is-active" data-value="yes">Yes</button>
+                <button type="button" class="sb-segBtn" data-value="no">No</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="sb-row">
+            <div class="sb-leftIcon" aria-hidden="true">📆</div>
+            <div class="sb-field">
+              <div class="sb-label">Day(s)</div>
+              <div class="sb-days" id="sbLayoutDays" role="group" aria-label="Visible days">
+                <button class="sb-day is-on" type="button" data-day="0" disabled>Mon</button>
+                <button class="sb-day is-on" type="button" data-day="1" disabled>Tue</button>
+                <button class="sb-day is-on" type="button" data-day="2" disabled>Wed</button>
+                <button class="sb-day is-on" type="button" data-day="3" disabled>Thu</button>
+                <button class="sb-day is-on" type="button" data-day="4" disabled>Fri</button>
+                <!-- weekend maps to your existing showWeekend checkbox -->
+                <button class="sb-day is-on" type="button" data-day="5" id="sbSat">Sat</button>
+                <button class="sb-day is-on" type="button" data-day="6" id="sbSun">Sun</button>
+              </div>
+              <!-- KEEP EXISTING ID for existing logic -->
+              <label class="sb-hiddenCheck">
+                <input id="showWeekend" name="showWeekend" type="checkbox" checked />
+                <span>Show weekend</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="sb-row">
+            <div class="sb-leftIcon" aria-hidden="true">🗓</div>
+            <div class="sb-field">
+              <div class="sb-label">Show dates</div>
+              <div class="sb-seg" data-setting="showDates">
+                <button type="button" class="sb-segBtn is-active" data-value="yes">Yes</button>
+                <button type="button" class="sb-segBtn" data-value="no">No</button>
+              </div>
+
+              <div class="sb-weekRow">
+                <div class="sb-weekLabel" id="sbWeekLabel">This week</div>
+                <input class="sb-input" id="sbWeek" type="week" />
+              </div>
+            </div>
+          </div>
+
+          <button class="sb-btn sb-btn--outline" type="button" id="sbSettingsCloseA">Update</button>
+        </div>
+
+        <!-- TIME TAB -->
+        <div class="sb-panel" data-panel="time" role="tabpanel">
+          <div class="sb-row">
+            <div class="sb-leftIcon" aria-hidden="true">🕒</div>
+            <div class="sb-field">
+              <div class="sb-label">Clock type</div>
+              <div class="sb-seg" data-setting="clockMode">
+                <button type="button" class="sb-segBtn" data-value="12">12-Hour</button>
+                <button type="button" class="sb-segBtn is-active" data-value="24">24-Hour</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="sb-row">
+            <div class="sb-leftIcon" aria-hidden="true">≡</div>
+            <div class="sb-field">
+              <div class="sb-label">Line spacing (minutes)</div>
+              <div class="sb-seg" data-setting="minuteStep">
+                <button type="button" class="sb-segBtn is-active" data-value="15">15</button>
+                <button type="button" class="sb-segBtn" data-value="30">30</button>
+                <button type="button" class="sb-segBtn" data-value="60">60</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="sb-row">
+            <div class="sb-leftIcon" aria-hidden="true">📏</div>
+            <div class="sb-field">
+              <div class="sb-label">Start hour - End hour</div>
+              <div class="sb-two">
+                <!-- These drive your existing startTime/endTime inputs to keep your logic -->
+                <input class="sb-input" id="sbStartHour" type="number" min="0" max="23" step="1" value="8" />
+                <input class="sb-input" id="sbEndHour" type="number" min="0" max="23" step="1" value="20" />
+              </div>
+
+              <!-- KEEP existing IDs so your current editor logic continues -->
+              <div class="sb-hidden">
+                <input class="input" id="startTime" name="startTime" type="time" value="08:00" />
+                <input class="input" id="endTime" name="endTime" type="time" value="20:00" />
+              </div>
+            </div>
+          </div>
+
+          <button class="sb-btn sb-btn--outline" type="button" id="sbSettingsCloseB">Update</button>
+        </div>
+
+        <!-- EVENT TAB -->
+        <div class="sb-panel" data-panel="event" role="tabpanel">
+          <div class="sb-row">
+            <div class="sb-leftIcon" aria-hidden="true">🎨</div>
+            <div class="sb-field">
+              <div class="sb-label">Auto select color</div>
+              <div class="sb-seg" data-setting="autoColor">
+                <button type="button" class="sb-segBtn is-active" data-value="yes">Yes</button>
+                <button type="button" class="sb-segBtn" data-value="no">No</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="sb-row">
+            <div class="sb-leftIcon" aria-hidden="true">⏳</div>
+            <div class="sb-field">
+              <div class="sb-label">Show time in events</div>
+              <div class="sb-seg" data-setting="showTimeInEvents">
+                <button type="button" class="sb-segBtn is-active" data-value="yes">Yes</button>
+                <button type="button" class="sb-segBtn" data-value="no">No</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="sb-row">
+            <div class="sb-leftIcon" aria-hidden="true">↕</div>
+            <div class="sb-field">
+              <div class="sb-label">Stretch to fit content</div>
+              <div class="sb-seg" data-setting="stretchText">
+                <button type="button" class="sb-segBtn is-active" data-value="yes">Yes</button>
+                <button type="button" class="sb-segBtn" data-value="no">No</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="sb-row">
+            <div class="sb-leftIcon" aria-hidden="true">≡</div>
+            <div class="sb-field">
+              <div class="sb-label">Center text</div>
+              <div class="sb-seg" data-setting="centerText">
+                <button type="button" class="sb-segBtn is-active" data-value="yes">Yes</button>
+                <button type="button" class="sb-segBtn" data-value="no">No</button>
+              </div>
+            </div>
+          </div>
+
+          <button class="sb-btn sb-btn--outline" type="button" id="sbSettingsCloseC">Update</button>
+        </div>
+
+        <!-- FONT TAB -->
+        <div class="sb-panel" data-panel="font" role="tabpanel">
+          <div class="sb-row">
+            <div class="sb-leftIcon" aria-hidden="true">A</div>
+            <div class="sb-field">
+              <div class="sb-label">Text font</div>
+              <select class="sb-input" id="sbFont">
+                <option value='system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif'>System</option>
+                <option value='Roboto, system-ui, -apple-system, Segoe UI, Arial, sans-serif'>Roboto</option>
+                <option value='Georgia, "Times New Roman", serif'>Serif</option>
+                <option value='"Trebuchet MS", system-ui, -apple-system, Segoe UI, Arial, sans-serif'>Trebuchet</option>
+                <option value='"Courier New", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'>Mono</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="sb-row">
+            <div class="sb-leftIcon" aria-hidden="true">🎨</div>
+            <div class="sb-field">
+              <div class="sb-label">Text color</div>
+              <input class="sb-input sb-input--colorWide" id="sbEventTextColor" type="color" value="#1b1f2a" />
+            </div>
+          </div>
+
+          <!-- Keep existing schedule title input for your current logic -->
+          <div class="sb-hidden">
             <input class="input" id="scheduleTitle" name="scheduleTitle" type="text" placeholder="My Schedule" />
-          </label>
-
-          <div class="field-row">
-            <label class="field" for="startTime">
-              <span class="field__label">Start</span>
-              <input class="input" id="startTime" name="startTime" type="time" value="08:00" />
-            </label>
-
-            <label class="field" for="endTime">
-              <span class="field__label">End</span>
-              <input class="input" id="endTime" name="endTime" type="time" value="20:00" />
-            </label>
           </div>
 
-          <label class="field field--check" for="showWeekend">
-            <input id="showWeekend" name="showWeekend" type="checkbox" checked />
-            <span>Show weekend</span>
-          </label>
+          <button class="sb-btn sb-btn--outline" type="button" id="sbSettingsCloseD">Update</button>
         </div>
+      </div>
+    </div>
+  </div>
 
-        <div class="panel__section">
-          <h2 class="panel__title">Add block</h2>
+  <!-- THEME / BACKGROUND -->
+  <div class="modal-overlay" id="modalTheme" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalThemeTitle">
+      <div class="modal__head">
+        <div class="modal__title" id="modalThemeTitle">Background & Theme</div>
+        <button class="iconbtn" type="button" data-modal-close aria-label="Close">×</button>
+      </div>
+      <div class="modal__body">
+        <div class="modal__card">
+          <div class="panel__section panel__section--collapsible" id="themeSettings" style="margin:0;">
+            <!-- START COLLAPSED (fix your issue) -->
+            <button class="panel__toggle" id="themeToggle" type="button" aria-expanded="false" aria-controls="themeBody">
+              <span class="panel__toggleTitle">Theme</span>
+              <span class="panel__chev" aria-hidden="true"></span>
+            </button>
 
-          <label class="field" for="blockText">
-            <span class="field__label">Text</span>
-            <input class="input" id="blockText" name="blockText" type="text" placeholder="Class / Work / Gym" />
-          </label>
+            <!-- hidden by default -->
+            <div class="panel__body" id="themeBody" hidden>
+              <div class="btn-row" style="margin-top: 12px;">
+                <button class="btn btn--ghost" id="btnThemeDark" type="button">Dark</button>
+                <button class="btn btn--ghost" id="btnThemeLight" type="button">Light</button>
+                <button class="btn btn--ghost" id="btnThemeOcean" type="button">Ocean</button>
+              </div>
 
-          <label class="field" for="blockColor">
-            <span class="field__label">Color</span>
-            <input class="input input--color" id="blockColor" name="blockColor" type="color" value="#4f46e5" />
-          </label>
+              <div class="field-row">
+                <label class="field">
+                  <span class="field__label">Background</span>
+                  <input class="input input--color" type="color" data-theme-var="--bg" />
+                </label>
 
-          <div class="field-row">
-            <label class="field" for="taskStartTime">
-              <span class="field__label">Task start</span>
-              <input class="input" id="taskStartTime" name="taskStartTime" type="time" value="09:00" />
-            </label>
+                <label class="field">
+                  <span class="field__label">Text</span>
+                  <input class="input input--color" type="color" data-theme-var="--text" />
+                </label>
+              </div>
 
-            <label class="field" for="taskEndTime">
-              <span class="field__label">Task end</span>
-              <input class="input" id="taskEndTime" name="taskEndTime" type="time" value="10:00" />
-            </label>
+              <div class="field-row">
+                <label class="field">
+                  <span class="field__label">Panel</span>
+                  <input class="input input--color" type="color" data-theme-var="--panel" />
+                </label>
+
+                <label class="field">
+                  <span class="field__label">Card</span>
+                  <input class="input input--color" type="color" data-theme-var="--card" />
+                </label>
+              </div>
+
+              <div class="field-row">
+                <label class="field">
+                  <span class="field__label">Muted</span>
+                  <input class="input input--color" type="color" data-theme-var="--muted" />
+                </label>
+
+                <label class="field">
+                  <span class="field__label">Brand</span>
+                  <input class="input input--color" type="color" data-theme-var="--brand" />
+                </label>
+              </div>
+
+              <div class="field-row">
+                <label class="field">
+                  <span class="field__label">Accent</span>
+                  <input class="input input--color" type="color" data-theme-var="--brand2" />
+                </label>
+
+                <label class="field">
+                  <span class="field__label">Danger</span>
+                  <input class="input input--color" type="color" data-theme-var="--danger" />
+                </label>
+              </div>
+
+              <button class="btn btn--danger btn--full" id="btnThemeReset" type="button">
+                Reset theme
+              </button>
+
+              <p class="muted small" style="margin: 10px 0 0;">
+                Theme settings are saved automatically in your browser.
+              </p>
+            </div>
           </div>
-
-          <button class="btn btn--primary btn--full" id="btnAddBlock" type="button">
-            Add block (pick a day on grid)
-          </button>
-
-          <p class="muted small">
-            Choose task start/end time, then click the grid to pick the day column.
-          </p>
         </div>
+      </div>
+    </div>
+  </div>
 
-        <div class="panel__section">
-          <h2 class="panel__title">Selection</h2>
-
+  <!-- SELECTION -->
+  <div class="modal-overlay" id="modalSelection" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalSelectionTitle">
+      <div class="modal__head">
+        <div class="modal__title" id="modalSelectionTitle">Selection</div>
+        <button class="iconbtn" type="button" data-modal-close aria-label="Close">×</button>
+      </div>
+      <div class="modal__body">
+        <div class="modal__card modal__grid">
           <div class="muted small" id="selectionHint">
             Select a block to edit its details.
           </div>
@@ -107,97 +484,30 @@
             <button class="btn btn--danger" id="btnDelete" type="button" disabled>Delete</button>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
 
-        <!-- THEME SETTINGS (DROPDOWN) -->
-        <div class="panel__section panel__section--collapsible" id="themeSettings">
-          <button class="panel__toggle" id="themeToggle" type="button" aria-expanded="false" aria-controls="themeBody">
-            <span class="panel__toggleTitle">Theme</span>
-            <span class="panel__chev" aria-hidden="true"></span>
-          </button>
+  <!-- RESET -->
+  <div class="modal-overlay" id="modalReset" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalResetTitle">
+      <div class="modal__head">
+        <div class="modal__title" id="modalResetTitle">Reset</div>
+        <button class="iconbtn" type="button" data-modal-close aria-label="Close">×</button>
+      </div>
+      <div class="modal__body">
+        <div class="modal__card modal__grid">
+          <p class="muted" style="margin:0;">
+            Choose what you want to reset.
+          </p>
 
-          <div class="panel__body" id="themeBody" hidden>
-            <div class="btn-row" style="margin-top: 20px;">
-              <button class="btn btn--ghost" id="btnThemeDark" type="button">Dark</button>
-              <button class="btn btn--ghost" id="btnThemeLight" type="button">Light</button>
-              <button class="btn btn--ghost" id="btnThemeOcean" type="button">Ocean</button>
-            </div>
-
-            <div class="field-row">
-              <label class="field">
-                <span class="field__label">Background</span>
-                <input class="input input--color" type="color" data-theme-var="--bg" />
-              </label>
-
-              <label class="field">
-                <span class="field__label">Text</span>
-                <input class="input input--color" type="color" data-theme-var="--text" />
-              </label>
-            </div>
-
-            <div class="field-row">
-              <label class="field">
-                <span class="field__label">Panel</span>
-                <input class="input input--color" type="color" data-theme-var="--panel" />
-              </label>
-
-              <label class="field">
-                <span class="field__label">Card</span>
-                <input class="input input--color" type="color" data-theme-var="--card" />
-              </label>
-            </div>
-
-            <div class="field-row">
-              <label class="field">
-                <span class="field__label">Muted</span>
-                <input class="input input--color" type="color" data-theme-var="--muted" />
-              </label>
-
-              <label class="field">
-                <span class="field__label">Brand</span>
-                <input class="input input--color" type="color" data-theme-var="--brand" />
-              </label>
-            </div>
-
-            <div class="field-row">
-              <label class="field">
-                <span class="field__label">Accent</span>
-                <input class="input input--color" type="color" data-theme-var="--brand2" />
-              </label>
-
-              <label class="field">
-                <span class="field__label">Danger</span>
-                <input class="input input--color" type="color" data-theme-var="--danger" />
-              </label>
-            </div>
-
-            <button class="btn btn--danger btn--full" id="btnThemeReset" type="button">
-              Reset theme
-            </button>
-
-            <p class="muted small" style="margin: 10px 0 0;">
-              Theme settings are saved automatically in your browser.
-            </p>
+          <div class="btn-row">
+            <button class="btn btn--danger" id="resetNewSchedule" type="button">New schedule</button>
+            <button class="btn btn--ghost" id="resetThemeOnly" type="button">Reset theme</button>
           </div>
         </div>
-      </aside>
-
-      <section class="stage" aria-label="Schedule Canvas">
-        <div class="stage__header">
-          <h1 class="stage__title" id="stageTitle">My Schedule</h1>
-          <div class="stage__meta muted" id="stageMeta">08:00 – 20:00</div>
-        </div>
-
-        <div class="schedule" id="scheduleRoot">
-          <div class="schedule__grid" id="grid">
-            <div class="schedule__axis" id="timeAxis" aria-hidden="true"></div>
-            <div class="schedule__days" id="dayHeader" aria-hidden="true"></div>
-
-            <!-- aria fix: aria-label is permitted because role="region" -->
-            <div class="schedule__canvas" id="canvas" role="region" aria-label="Schedule grid"></div>
-          </div>
-        </div>
-      </section>
-    </main>
+      </div>
+    </div>
   </div>
 
   <noscript>

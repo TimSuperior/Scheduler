@@ -8,47 +8,61 @@ import { initExport } from "./features/export.js";
 import { apiLoad } from "./core/api.js";
 import { qs, getQueryParam } from "./core/utils.js";
 import { initThemeSettings } from "./features/settings.js";
-
+import { setScheduleMode, getScheduleMode } from "./core/timeformat.js";
 
 export function initRouter() {
   const path = window.location.pathname;
 
-  // Detect which page we're on by filename
   if (path.endsWith("/public/index.html") || path.endsWith("/public/")) {
-    // Home page: nothing special needed
     return;
   }
 
-  // Shared store across pages
   const store = new Store(CONFIG);
 
-  // Common export/print behavior on pages that have it
   initExport({ store });
 
-if (path.endsWith("/public/app/editor.html") || path.endsWith("/public/app/edit.html")) {
-  initThemeSettings();     // <-- NEW
-  initEditorPage({ store });
+  if (path.endsWith("/public/app/editor.html") || path.endsWith("/public/app/edit.html")) {
+    initThemeSettings();
+    initEditorPage({ store });
 
-  renderSchedule({
-    store,
-    root: qs("#grid"),
-    timeAxis: qs("#timeAxis"),
-    dayHeader: qs("#dayHeader"),
-    canvas: qs("#canvas"),
-    readOnly: false
-  });
+    // Expose for UI layer (settings modal)
+    window.__SB_STORE = store;
 
-  initInteractions({ store, canvas: qs("#canvas") });
-  return;
-}
+    const timeAxis = qs("#timeAxis");
+    const dayHeader = qs("#dayHeader");
+    const canvas = qs("#canvas");
+
+    // Apply saved UI settings into store.meta (from main.js key)
+    applySavedUiSettings(store);
+
+    function doRender() {
+      renderSchedule({
+        store,
+        root: qs("#grid"),
+        timeAxis,
+        dayHeader,
+        canvas,
+        readOnly: false
+      });
+
+      const titleEl = qs("#stageTitle");
+      const metaEl = qs("#stageMeta");
+      if (titleEl) titleEl.textContent = store.state.meta.title || "Schedule";
+      if (metaEl) metaEl.textContent = store.getMetaLine();
+    }
+
+    window.__SB_RENDER = doRender;
+
+    doRender();
+    initInteractions({ store, canvas });
+
+    return;
+  }
 
   if (path.endsWith("/public/app/view.html") || path.endsWith("/public/app/embed.html")) {
     const isEmbed = path.endsWith("/public/app/embed.html");
-
-    // Read id from ?id=
     const id = getQueryParam("id");
 
-    // Render empty grid first
     renderSchedule({
       store,
       root: qs("#grid") || null,
@@ -58,7 +72,6 @@ if (path.endsWith("/public/app/editor.html") || path.endsWith("/public/app/edit.
       readOnly: true
     });
 
-    // If view page has load UI, wire it
     const btnLoad = qs("#btnLoad");
     const inputId = qs("#scheduleId");
     const status = qs("#loadStatus");
@@ -72,12 +85,10 @@ if (path.endsWith("/public/app/editor.html") || path.endsWith("/public/app/edit.
     }
 
     if (id) {
-      // Auto load
       loadAndRender(id);
     } else {
-      // In embed mode, don't show extra UI anyway.
       if (isEmbed) {
-        // do nothing
+        // nothing
       }
     }
 
@@ -86,6 +97,7 @@ if (path.endsWith("/public/app/editor.html") || path.endsWith("/public/app/edit.
         if (status) status.textContent = "Loading…";
         const data = await apiLoad(loadId);
         store.replaceAll(data);
+
         renderSchedule({
           store,
           timeAxis: qs("#timeAxis"),
@@ -93,6 +105,7 @@ if (path.endsWith("/public/app/editor.html") || path.endsWith("/public/app/edit.
           canvas: qs("#canvas"),
           readOnly: true
         });
+
         if (status) status.textContent = "Loaded.";
         const titleEl = qs("#stageTitle");
         const metaEl = qs("#stageMeta");
@@ -107,9 +120,45 @@ if (path.endsWith("/public/app/editor.html") || path.endsWith("/public/app/edit.
     return;
   }
 
-  // Default fallback: try to render if schedule elements exist
   const canvas = qs("#canvas");
   if (canvas) {
     renderSchedule({ store, timeAxis: qs("#timeAxis"), dayHeader: qs("#dayHeader"), canvas, readOnly: true });
   }
+}
+
+function applySavedUiSettings(store) {
+  // This key is used by main.js
+  const KEY = "sb_editor_ui_settings_v1";
+  let cfg = null;
+
+  try {
+    const raw = localStorage.getItem(KEY);
+    cfg = raw ? JSON.parse(raw) : null;
+  } catch {
+    cfg = null;
+  }
+
+  // clock
+  const clockMode = cfg && (cfg.clockMode === "12" || cfg.clockMode === "24") ? cfg.clockMode : getScheduleMode();
+  setScheduleMode(clockMode);
+
+  // meta options for rendering
+  if (store && store.state && store.state.meta) {
+    const m = store.state.meta;
+    m.minuteStep = Number(cfg?.minuteStep) || m.minuteStep || 15;
+    m.showDates = !!(cfg?.showDates === "yes");
+    m.week = String(cfg?.week || "");
+    m.showTimeInEvents = cfg?.showTimeInEvents !== "no";
+    m.autoColor = cfg?.autoColor !== "no";
+    m.fontFamily = String(cfg?.fontFamily || 'system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif');
+    m.eventTextColor = String(cfg?.eventTextColor || "#1b1f2a");
+  }
+
+  // Apply CSS vars + classes
+  document.documentElement.style.setProperty("--sb-font", String(cfg?.fontFamily || 'system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif'));
+  document.documentElement.style.setProperty("--sb-event-text", String(cfg?.eventTextColor || "#1b1f2a"));
+
+  document.body.classList.toggle("sb-hide-title", cfg?.showTitle === "no");
+  document.body.classList.toggle("sb-center-text", cfg?.centerText === "yes");
+  document.body.classList.toggle("sb-stretch-text", cfg?.stretchText === "yes");
 }

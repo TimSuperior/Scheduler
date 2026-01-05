@@ -25,6 +25,24 @@
   grid-template-columns: 74px 1fr;
   grid-template-rows: 44px 1fr;
   background: rgba(0,0,0,.10);
+
+  /* make scrollbar less annoying */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.22) transparent;
+}
+
+.schedule__grid::-webkit-scrollbar{
+  width: 10px;
+  height: 10px;
+}
+.schedule__grid::-webkit-scrollbar-track{
+  background: transparent;
+}
+.schedule__grid::-webkit-scrollbar-thumb{
+  background: rgba(255,255,255,.18);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
 }
 
 /* top-left empty corner */

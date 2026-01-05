@@ -223,7 +223,7 @@
    ========================= */
 
 .panel__section--collapsible{
-  padding: 0; /* header button handles padding */
+  padding: 0;
   overflow: hidden;
 }
 
@@ -275,10 +275,223 @@
   border-top: 1px solid var(--line2);
 }
 
+/* =========================
+   EDITOR: no middle scrollbar + right rail + modals
+   ========================= */
+
+.page--editor{
+  height: 100vh;
+  overflow: hidden;
+}
+
+.page--editor .app-shell{
+  height: 100vh;
+  overflow: hidden;
+}
+
+.page--editor .workspace{
+  grid-template-columns: 1fr 290px;
+  height: calc(100vh - 84px);
+  overflow: hidden;
+  align-items: stretch;
+}
+
+.page--editor .stage{
+  height: 100%;
+  min-height: 0;
+}
+
+.page--editor #scheduleRoot,
+.page--editor .schedule,
+.page--editor .schedule__grid{
+  min-height: 0;
+}
+
+/* Hide scrollbars visually (still scrolls) */
+.page--editor .schedule__grid{
+  scrollbar-width: none;
+}
+.page--editor .schedule__grid::-webkit-scrollbar{
+  width: 0;
+  height: 0;
+}
+
+/* Right action rail */
+.sidepanel{
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255,255,255,.03);
+  box-shadow: var(--shadow);
+  padding: 12px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sidebtn{
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(0,0,0,.10);
+  color: var(--text);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.sidebtn:hover{
+  background: rgba(255,255,255,.05);
+}
+
+.sidebtn--primary{
+  background: rgba(79,70,229,.18);
+  border-color: rgba(79,70,229,.35);
+}
+
+.sidebtn--danger{
+  background: rgba(239,68,68,.14);
+  border-color: rgba(239,68,68,.28);
+}
+
+.sidebtn__icon{
+  opacity: .9;
+  font-weight: 900;
+}
+
+.sidepanel__spacer{ flex: 1; }
+
+.sidepanel__mini{
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.tilebtn{
+  display: grid;
+  place-items: center;
+  padding: 14px 0;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(0,0,0,.10);
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 900;
+}
+.tilebtn:hover{
+  background: rgba(255,255,255,.05);
+}
+
+/* Modals */
+.modal-overlay{
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .18s ease;
+}
+
+.modal-overlay.is-open{
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal{
+  width: min(760px, 100%);
+  max-height: calc(100vh - 80px);
+  overflow: auto;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: rgba(11,16,32,.92);
+  box-shadow: var(--shadow);
+}
+
+.modal__head{
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 16px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(11,16,32,.92);
+}
+
+.modal__title{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 900;
+  font-size: 20px;
+}
+
+.iconbtn{
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+}
+.iconbtn:hover{ background: rgba(255,255,255,.07); }
+
+.modal__body{
+  padding: 16px;
+}
+
+.modal__card{
+  border: 1px solid var(--line2);
+  background: rgba(0,0,0,.10);
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.modal__grid{
+  display: grid;
+  gap: 12px;
+}
+
 @media (max-width: 980px){
   .hero{ grid-template-columns: 1fr; }
   .workspace{ grid-template-columns: 1fr; }
   .panel{ height: auto; }
   .stage{ min-height: 520px; }
   .grid-2{ grid-template-columns: 1fr; }
+
+  .page--editor .workspace{
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+
+  .sidepanel{
+    height: auto;
+  }
+
+  .page--editor{
+    height: auto;
+    overflow: auto;
+  }
+
+  .page--editor .app-shell{
+    height: auto;
+    overflow: visible;
+  }
 }
