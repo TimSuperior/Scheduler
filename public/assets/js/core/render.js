@@ -7,7 +7,12 @@ export function renderSchedule({ store, timeAxis, dayHeader, canvas, readOnly = 
 
   if (!timeAxis || !dayHeader || !canvas) return;
 
-  const days = store.getVisibleDays();
+  const visibleDayIndices =
+    typeof store.getVisibleDayIndices === "function"
+      ? store.getVisibleDayIndices()
+      : deriveVisibleDayIndicesLegacy(meta);
+
+  const days = visibleDayIndices.map((i) => store.config.daysFull[i] || "");
   const totalMinutes = meta.endMinute - meta.startMinute;
 
   // --- Align background grid with step/hour sizes ---
@@ -22,7 +27,7 @@ export function renderSchedule({ store, timeAxis, dayHeader, canvas, readOnly = 
   clearEl(dayHeader);
   dayHeader.style.gridTemplateColumns = `repeat(${days.length}, 1fr)`;
 
-  const labels = buildDayLabels(days, meta);
+  const labels = buildDayLabels(visibleDayIndices, meta, days);
   labels.forEach((label) => {
     dayHeader.appendChild(el("div", { className: "schedule__day", text: label }));
   });
@@ -39,32 +44,24 @@ export function renderSchedule({ store, timeAxis, dayHeader, canvas, readOnly = 
   // --- Blocks ---
   clearEl(canvas);
 
-  const daysCount = days.length;
+  const daysCount = visibleDayIndices.length;
 
-  // Use real width; fallback to clientWidth; fallback to constant
   const rect = canvas.getBoundingClientRect();
   const cw = rect.width || canvas.clientWidth || 0;
   const colWidth = (cw > 0 ? cw / daysCount : 120);
   const gap = 2;
 
-  // Default behavior: show times (unless explicitly disabled)
   const showTimeInEvents = meta.showTimeInEvents !== false;
 
   state.items.forEach((item) => {
-    // Keep old behavior: hide weekend blocks if weekend is hidden
-    if (!meta.showWeekend && item.dayIndex >= 5) return;
-
-    // Safety
-    if (item.dayIndex < 0) return;
-
-    // If weekend is hidden, daysCount is likely 5; weekend items already returned above
-    // If weekend is shown, daysCount is 7; allow 0..6
-    if (item.dayIndex >= daysCount) return;
+    // map stored dayIndex (actual weekday 0..6) -> visible column
+    const colIndex = visibleDayIndices.indexOf(item.dayIndex);
+    if (colIndex < 0) return;
 
     const top = (item.start - meta.startMinute) * pxPerMin;
     const height = Math.max(8, (item.end - item.start) * pxPerMin);
 
-    const left = item.dayIndex * colWidth + gap;
+    const left = colIndex * colWidth + gap;
     const width = Math.max(8, colWidth - gap * 2);
 
     const node = el("div", {
@@ -105,14 +102,17 @@ function withAlpha(hex, a) {
   return `rgba(${r},${g},${b},${a})`;
 }
 
+function deriveVisibleDayIndicesLegacy(meta) {
+  if (meta && meta.showWeekend === false) return [0, 1, 2, 3, 4];
+  return [0, 1, 2, 3, 4, 5, 6];
+}
+
 /**
- * Optional: show dates in the day header.
- * - If meta.showDates is falsy, keep original labels.
- * - If meta.week is set (e.g. "2025-W51"), render that ISO-week starting Monday.
- * - Otherwise use current week (Mon-based) for display only.
+ * Correct date labels even if you hide mid-week days:
+ * visibleDayIndices = [0,2,4] => show Mon/Wed/Fri dates.
  */
-function buildDayLabels(days, meta) {
-  if (!meta || !meta.showDates) return days;
+function buildDayLabels(visibleDayIndices, meta, dayNames) {
+  if (!meta || !meta.showDates) return dayNames;
 
   const week = String(meta.week || "");
   const start = week ? isoWeekStartDate(week) : currentWeekStart();
@@ -123,17 +123,15 @@ function buildDayLabels(days, meta) {
     month: "short"
   });
 
-  // days are in order Mon..(Fri/Sun) depending on visibility
-  return days.map((_, i) => {
+  return visibleDayIndices.map((dayIdx) => {
     const dt = new Date(start);
-    dt.setDate(dt.getDate() + i);
+    dt.setDate(dt.getDate() + dayIdx);
     return fmt.format(dt);
   });
 }
 
 function currentWeekStart() {
   const now = new Date();
-  // Mon-based week start
   const day = now.getDay(); // 0 Sun .. 6 Sat
   const diff = (day === 0 ? -6 : 1 - day);
   const d = new Date(now);
@@ -150,13 +148,11 @@ function isoWeekStartDate(isoWeek) {
   const year = Number(m[1]);
   const week = Number(m[2]);
 
-  // ISO week: week 1 contains Jan 4th
   const jan4 = new Date(Date.UTC(year, 0, 4));
   const day = jan4.getUTCDay() || 7; // Mon=1..Sun=7
   const monday = new Date(jan4);
   monday.setUTCDate(jan4.getUTCDate() - (day - 1) + (week - 1) * 7);
 
-  // Convert to local date at midnight
   const local = new Date(monday.getUTCFullYear(), monday.getUTCMonth(), monday.getUTCDate());
   local.setHours(0, 0, 0, 0);
   return local;

@@ -371,6 +371,9 @@ export function initEditorPage({ store }) {
     if (inpTaskStart) inpTaskStart.value = minsToTimeInput(d.start);
     if (inpTaskEnd) inpTaskEnd.value = minsToTimeInput(d.end);
 
+    // If your day selector exists, and nothing is selected yet, preselect clicked day
+    preselectAddDaysIfEmpty(d.dayIndex);
+
     openModal("modalAdd");
 
     // focus title
@@ -475,24 +478,38 @@ export function initEditorPage({ store }) {
         return;
       }
 
-      // ADD mode with known placement (clicked tile)
+      // ✅ ADD mode with known placement (clicked tile)
+      // If user selected multiple days in Add modal, create copies for each selected day.
       if (pendingPlacement) {
-        const item = {
-          id: uid(),
-          dayIndex: pendingPlacement.dayIndex,
-          start: s,
-          end: e,
-          text,
-          color
-        };
-        if (description != null) item.description = description;
+        const selectedDays = getAddModalSelectedDays();
+        const dayList = (selectedDays.length ? selectedDays : [pendingPlacement.dayIndex])
+          .filter((d) => Number.isFinite(d) && d >= 0 && d <= 6);
 
-        addItem(item);
+        const uniqueDays = Array.from(new Set(dayList));
+        if (uniqueDays.length === 0) return;
+
+        const createdIds = [];
+
+        for (const dayIndex of uniqueDays) {
+          const item = {
+            id: uid(),
+            dayIndex,
+            start: s,
+            end: e,
+            text,
+            color
+          };
+          if (description != null) item.description = description;
+
+          addItem(item);
+          createdIds.push(item.id);
+        }
 
         pendingPlacement = null;
         closeModal("modalAdd");
 
-        document.dispatchEvent(new CustomEvent("sb:select", { detail: { id: item.id } }));
+        // Select first created (keeps selection logic consistent)
+        document.dispatchEvent(new CustomEvent("sb:select", { detail: { id: createdIds[0] || null } }));
         requestRender();
         return;
       }
@@ -520,6 +537,28 @@ export function initEditorPage({ store }) {
     editId = null;
     setEventModalMode("add"); // ensure next open starts clean (Copy hidden)
   });
+
+  // ---- helpers for multi-day Add modal ----
+  function getAddModalSelectedDays() {
+    const wrap = document.getElementById("sbAddDays");
+    if (!wrap) return [];
+    const btns = Array.from(wrap.querySelectorAll(".sb-day.is-on"));
+    const out = [];
+    for (const b of btns) {
+      const v = Number(b.getAttribute("data-day"));
+      if (Number.isFinite(v)) out.push(v);
+    }
+    return Array.from(new Set(out)).sort((a, b) => a - b);
+  }
+
+  function preselectAddDaysIfEmpty(dayIndex) {
+    const wrap = document.getElementById("sbAddDays");
+    if (!wrap) return;
+    const anyOn = !!wrap.querySelector(".sb-day.is-on");
+    if (anyOn) return;
+    const btn = wrap.querySelector(`.sb-day[data-day="${dayIndex}"]`);
+    if (btn) btn.classList.add("is-on");
+  }
 }
 
 function getMetaLine(store) {

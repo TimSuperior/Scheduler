@@ -150,12 +150,20 @@ function applySavedUiSettings(store) {
     m.week = String(cfg?.week || "");
     m.showTimeInEvents = cfg?.showTimeInEvents !== "no";
     m.autoColor = cfg?.autoColor !== "no";
-    m.fontFamily = String(cfg?.fontFamily || 'system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif');
+    m.fontFamily = String(cfg?.fontFamily || "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif");
     m.eventTextColor = String(cfg?.eventTextColor || "#1b1f2a");
+
+    // ✅ NEW: apply per-day visibility if saved
+    if (Array.isArray(cfg?.daysVisible) && cfg.daysVisible.length === 7) {
+      const v = cfg.daysVisible.map((b) => !!b);
+      m.visibleDays = v;
+      m.hiddenDays = v.map((on, i) => (on ? null : i)).filter((x) => x != null);
+      m.showWeekend = !!(v[5] || v[6]);
+    }
   }
 
   // Apply CSS vars + classes
-  document.documentElement.style.setProperty("--sb-font", String(cfg?.fontFamily || 'system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif'));
+  document.documentElement.style.setProperty("--sb-font", String(cfg?.fontFamily || "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif"));
   document.documentElement.style.setProperty("--sb-event-text", String(cfg?.eventTextColor || "#1b1f2a"));
 
   document.body.classList.toggle("sb-hide-title", cfg?.showTitle === "no");

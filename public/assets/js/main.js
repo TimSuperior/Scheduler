@@ -1,3 +1,6 @@
+// /public/assets/js/main.js  (the file that contains setupEditorChrome/setupSettingsBindings/setupAddModalEnhancements/etc.)
+// NOTE: only changed (1) Add modal day selection -> multi-select, (2) Settings day visibility wiring + persistence.
+
 import { initRouter } from "./router.js";
 import { bootCommon } from "./core/utils.js";
 import { setScheduleMode, getScheduleMode } from "./core/timeformat.js";
@@ -174,8 +177,10 @@ function setupSettingsBindings({ closeModal }) {
     showTimeInEvents: "yes",
     stretchText: "yes",
     centerText: "yes",
-    fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif',
-    eventTextColor: "#1b1f2a"
+    fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif",
+    eventTextColor: "#1b1f2a",
+    // ✅ NEW: per-day visibility (array of 7 booleans)
+    daysVisible: null
   };
 
   const state = load();
@@ -199,33 +204,94 @@ function setupSettingsBindings({ closeModal }) {
   });
 
   const showWeekend = document.getElementById("showWeekend");
-  const satBtn = document.getElementById("sbSat");
-  const sunBtn = document.getElementById("sbSun");
 
-  function syncWeekendButtons() {
-    const on = !!(showWeekend && showWeekend.checked);
-    if (satBtn) satBtn.classList.toggle("is-on", on);
-    if (sunBtn) sunBtn.classList.toggle("is-on", on);
-    if (satBtn) satBtn.setAttribute("aria-pressed", on ? "true" : "false");
-    if (sunBtn) sunBtn.setAttribute("aria-pressed", on ? "true" : "false");
+  // ✅ Day buttons in "Schedule settings" (if they exist)
+  const dayButtons = [
+    { id: "sbMon", idx: 0 },
+    { id: "sbTue", idx: 1 },
+    { id: "sbWed", idx: 2 },
+    { id: "sbThu", idx: 3 },
+    { id: "sbFri", idx: 4 },
+    { id: "sbSat", idx: 5 },
+    { id: "sbSun", idx: 6 }
+  ].map((x) => ({ ...x, el: document.getElementById(x.id) }))
+   .filter((x) => !!x.el);
+
+  function normalizeDaysVisible(v) {
+    // Prefer saved state; else derive from store.meta; else all true
+    if (Array.isArray(v) && v.length === 7) {
+      return v.map((b) => !!b);
+    }
+
+    const s = store();
+    const meta = s && s.state && s.state.meta ? s.state.meta : null;
+
+    if (meta && Array.isArray(meta.visibleDays) && meta.visibleDays.length === 7) {
+      return meta.visibleDays.map((b) => !!b);
+    }
+
+    const base = [true, true, true, true, true, true, true];
+    if (meta && meta.showWeekend === false) {
+      base[5] = false;
+      base[6] = false;
+    }
+    return base;
   }
 
-  if (showWeekend) {
-    showWeekend.addEventListener("change", () => {
-      syncWeekendButtons();
-      rerender();
+  state.daysVisible = normalizeDaysVisible(state.daysVisible);
+
+  function paintDayButtons() {
+    if (!dayButtons.length) return;
+    const v = normalizeDaysVisible(state.daysVisible);
+    state.daysVisible = v;
+
+    dayButtons.forEach(({ el, idx }) => {
+      const on = !!v[idx];
+      el.classList.toggle("is-on", on);
+      el.setAttribute("aria-pressed", on ? "true" : "false");
     });
   }
-  if (satBtn) satBtn.addEventListener("click", () => {
-    if (!showWeekend) return;
-    showWeekend.checked = !showWeekend.checked;
-    showWeekend.dispatchEvent(new Event("change", { bubbles: true }));
-  });
-  if (sunBtn) sunBtn.addEventListener("click", () => {
-    if (!showWeekend) return;
-    showWeekend.checked = !showWeekend.checked;
-    showWeekend.dispatchEvent(new Event("change", { bubbles: true }));
-  });
+
+  function toggleDay(idx) {
+    const v = normalizeDaysVisible(state.daysVisible);
+    const next = v.slice();
+    next[idx] = !next[idx];
+
+    // Don't allow all days off (keeps editor usable)
+    if (!next.some(Boolean)) return;
+
+    state.daysVisible = next;
+    save();
+    apply();
+
+    // Keep weekend checkbox sensible (does NOT fire change automatically)
+    if (showWeekend) showWeekend.checked = !!(next[5] || next[6]);
+  }
+
+  // Wire day buttons if present
+  if (dayButtons.length) {
+    dayButtons.forEach(({ el, idx }) => {
+      el.addEventListener("click", () => toggleDay(idx));
+    });
+  }
+
+  // Weekend checkbox keeps working; now it also sets Sat+Sun visibility
+  if (showWeekend) {
+    showWeekend.addEventListener("change", () => {
+      const v = normalizeDaysVisible(state.daysVisible);
+      const on = !!showWeekend.checked;
+      const next = v.slice();
+      next[5] = on;
+      next[6] = on;
+
+      // still keep at least one day visible
+      if (!next.some(Boolean)) return;
+
+      state.daysVisible = next;
+      save();
+      apply();
+    });
+  }
 
   const weekInput = document.getElementById("sbWeek");
   if (weekInput) {
@@ -287,7 +353,7 @@ function setupSettingsBindings({ closeModal }) {
   }
 
   paintSegs();
-  syncWeekendButtons();
+  paintDayButtons();
   apply();
 
   function paintSegs() {
@@ -316,6 +382,16 @@ function setupSettingsBindings({ closeModal }) {
       s.state.meta.autoColor = state.autoColor !== "no";
       s.state.meta.fontFamily = state.fontFamily || defaults.fontFamily;
       s.state.meta.eventTextColor = state.eventTextColor || defaults.eventTextColor;
+
+      // ✅ Apply per-day visibility into meta for renderer
+      const v = normalizeDaysVisible(state.daysVisible);
+      state.daysVisible = v;
+
+      s.state.meta.visibleDays = v;
+      s.state.meta.hiddenDays = v.map((on, i) => (on ? null : i)).filter((x) => x != null);
+
+      // keep legacy weekend flag meaningful (show weekend if at least one is on)
+      s.state.meta.showWeekend = !!(v[5] || v[6]);
     }
 
     document.documentElement.style.setProperty("--sb-font", state.fontFamily || defaults.fontFamily);
@@ -324,17 +400,20 @@ function setupSettingsBindings({ closeModal }) {
     const weekLabel = document.getElementById("sbWeekLabel");
     if (weekLabel) weekLabel.textContent = state.week ? `Week ${state.week}` : "This week";
 
+    paintDayButtons();
     rerender();
   }
 
   function load() {
     try {
       const raw = localStorage.getItem(KEY);
-      if (!raw) return { ...defaults };
+      if (!raw) return { ...defaults, daysVisible: normalizeDaysVisible(null) };
       const obj = JSON.parse(raw);
-      return { ...defaults, ...(obj || {}) };
+      const merged = { ...defaults, ...(obj || {}) };
+      merged.daysVisible = normalizeDaysVisible(merged.daysVisible);
+      return merged;
     } catch {
-      return { ...defaults };
+      return { ...defaults, daysVisible: normalizeDaysVisible(null) };
     }
   }
 
@@ -411,19 +490,33 @@ function setupAddModalEnhancements({ closeModal }) {
   if (autoColorBtn) autoColorBtn.addEventListener("click", applyAutoColor);
   if (txt) txt.addEventListener("blur", applyAutoColor);
 
-  let forcedDay = null;
+  // ✅ MULTI-DAY selection in Add modal
+  let forcedDays = new Set(); // instead of single forcedDay
   const dayWrap = document.getElementById("sbAddDays");
+
+  function readForcedDaysFromUI() {
+    if (!dayWrap) return new Set();
+    const s = new Set();
+    dayWrap.querySelectorAll(".sb-day.is-on").forEach((b) => {
+      const d = Number(b.getAttribute("data-day"));
+      if (Number.isFinite(d)) s.add(d);
+    });
+    return s;
+  }
+
   if (dayWrap) {
+    forcedDays = readForcedDaysFromUI();
+
     dayWrap.addEventListener("click", (e) => {
       const btn = e.target instanceof HTMLElement ? e.target.closest(".sb-day") : null;
       if (!btn) return;
       const d = Number(btn.getAttribute("data-day"));
       if (!Number.isFinite(d)) return;
 
-      forcedDay = d;
-
-      dayWrap.querySelectorAll(".sb-day").forEach((b) => b.classList.remove("is-on"));
-      btn.classList.add("is-on");
+      // toggle (multi-select)
+      const on = btn.classList.toggle("is-on");
+      if (on) forcedDays.add(d);
+      else forcedDays.delete(d);
     });
   }
 
@@ -444,7 +537,8 @@ function setupAddModalEnhancements({ closeModal }) {
       if (!armed) return;
       armed = false;
 
-      if (forcedDay == null) return;
+      // if no forced days selected => behave exactly like before (do nothing)
+      if (!forcedDays || forcedDays.size === 0) return;
 
       e.preventDefault();
       e.stopImmediatePropagation();
@@ -454,17 +548,22 @@ function setupAddModalEnhancements({ closeModal }) {
       const daysCount = dayHeader ? dayHeader.children.length : 7;
       const colW = rect.width / (daysCount || 7);
 
-      const x = rect.left + (forcedDay + 0.5) * colW;
-      const y = e.clientY;
+      const days = Array.from(forcedDays).filter(Number.isFinite).sort((a, b) => a - b);
 
-      const ev = new MouseEvent("click", {
-        bubbles: true,
-        cancelable: true,
-        clientX: x,
-        clientY: y
-      });
+      // Dispatch one synthetic click per selected day
+      for (const d of days) {
+        const x = rect.left + (d + 0.5) * colW;
+        const y = e.clientY;
 
-      canvas.dispatchEvent(ev);
+        const ev = new MouseEvent("click", {
+          bubbles: true,
+          cancelable: true,
+          clientX: x,
+          clientY: y
+        });
+
+        canvas.dispatchEvent(ev);
+      }
     }, true);
   }
 }
