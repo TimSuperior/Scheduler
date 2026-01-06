@@ -1,4 +1,4 @@
-<!doctype html>
+<!doctype html> 
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -61,7 +61,8 @@
           <span>Background</span><span class="sidebtn__icon">🖼</span>
         </button>
 
-        <button class="sidebtn" id="sideSelection" type="button">
+        <!-- ✅ removed from UI (kept in DOM to avoid breaking other JS) -->
+        <button class="sidebtn" id="sideSelection" type="button" hidden>
           <span>Selection</span><span class="sidebtn__icon">✎</span>
         </button>
 
@@ -88,13 +89,13 @@
        MODALS
        ========================= -->
 
-  <!-- ADD EVENT -->
+  <!-- ADD / EDIT EVENT -->
   <div class="modal-overlay" id="modalAdd" hidden>
     <div class="modal modal--light" role="dialog" aria-modal="true" aria-labelledby="modalAddTitle">
       <div class="modal__head modal__head--light">
         <div class="modal__title modal__title--light" id="modalAddTitle">
           <span class="modal__icon" aria-hidden="true">📅</span>
-          Add event
+          <span id="modalAddHeadingText">Add event</span>
         </div>
         <button class="iconbtn iconbtn--light" type="button" data-modal-close aria-label="Close">×</button>
       </div>
@@ -156,7 +157,12 @@
           </div>
 
           <div class="sb-actions">
-            <button class="sb-btn sb-btn--ghost" id="sbCopySelection" type="button">Copy</button>
+            <!-- ✅ Hidden in Add mode; shown only in Edit mode -->
+            <button class="sb-btn sb-btn--ghost" id="sbCopySelection" type="button" hidden>Copy</button>
+
+            <!-- ✅ Only for Edit mode -->
+            <button class="sb-btn sb-btn--danger" id="btnDeleteBlock" type="button" hidden>Delete</button>
+
             <button class="sb-btn sb-btn--primary" id="btnAddBlock" type="button">Add</button>
           </div>
         </div>
